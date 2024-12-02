@@ -66,37 +66,50 @@ Tab::
 return
 
 ; Trading hotkeys with ShareX recording control
-W::
-    Send, {Pause}  ; Start recording
-    Send, !w       ; Press Shift+W for buy action
-    return
 
-E::
-    Send, {Pause}  ; Start recording
-    Send, !e       ; Press Shift+W for buy action
-    return
 
 A::
-    Send, !a       ; Presses Shift+A to close position
-    return
-
-D::
-    Send, !d       ; Presses Shift+D to sell at ask
+    Send, !a       
+    Send, {Pause}  ; Start recording
     return
 
 S::
-    Send, !c       ; Presses Shift+C to cancel orders
+    Send, !g       
     Sleep, cancelDelay
     Send, !s       ; Presses Shift+S to sell half
+    Send, {Pause}  ; Start recording
     return
 
-C::
-    Send, !c       ; Presses Alt+C
+D::
+    Send, !g       ; Presses Shift+C to cancel orders
+    Sleep, cancelDelay
+    Send, !d       ; Presses Shift+D to sell at ask
+    Send, {Pause}  ; Start recording
+    return
+
+E::
+    Send, !g       ; Presses Shift+C to cancel orders
+    Sleep, cancelDelay
+    Send, !e       ; Presses Shift+S to sell half
+    Send, {Pause}  ; Start recording
+    return
+
+W::
+    Send, !g       ; Presses Shift+C to cancel orders
+    Sleep, cancelDelay
+    Send, !w       ; Presses Shift+D to sell at ask
+    Send, {Pause}  ; Start recording
     return
 
 F::
     Send, !f       ; Presses Shift+F to close position
+    Send, {Pause}  ; Start recording
     return
+
+G::
+    Send, !g       ; Presses Alt+C
+    return
+
 
 ; Press Ctrl+Alt+S to toggle suspend for the entire script with feedback
 ^!s::
