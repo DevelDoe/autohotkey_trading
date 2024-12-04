@@ -5,7 +5,7 @@ DelayAfterDoubleClick := 250  ; Delay after double-click before copying
 DelayBeforeDoubleClick := 100  ; New delay before the double-click
 
 ; Delay time for canceling orders in trading hotkeys
-cancelDelay := 100  ; Adjust as needed
+cancelDelay := 300  ; Adjust as needed
 
 ; Define the threshold for a long press (e.g., 500ms)
 LongPressThreshold := 500
