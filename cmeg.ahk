@@ -75,7 +75,7 @@ A::
 
 S::
     Send, !g       
-    Sleep, cancelDelay
+    Sleep, 700
     Send, !s       ; Presses Shift+S to sell half
     Send, {Pause}  ; Start recording
     return
@@ -93,6 +93,13 @@ E::
     Send, !e       ; Presses Shift+S to sell half
     Send, {Pause}  ; Start recording
     return
+
+Space::
+    Send, !g       ; Presses Shift+C to cancel orders
+    Sleep, cancelDelay
+    Send, !e
+    return
+
 
 W::
     Send, !g       ; Presses Shift+C to cancel orders
