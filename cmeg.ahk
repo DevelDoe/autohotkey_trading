@@ -5,7 +5,7 @@ DelayAfterDoubleClick := 250  ; Delay after double-click before copying
 DelayBeforeDoubleClick := 100  ; New delay before the double-click
 
 ; Delay time for canceling orders in trading hotkeys
-cancelDelay := 300  ; Adjust as needed
+cancelDelay := 1100  ; Adjust as needed
 
 ; Define the threshold for a long press (e.g., 500ms)
 LongPressThreshold := 500
@@ -25,14 +25,14 @@ MButton::
         Click 2            ; Double-click to select the content
         Sleep, DelayAfterClick
         Send, ^v           ; Paste clipboard content
-        Sleep, 500         ; Wait 500ms
+        Sleep, DelayAfterFirstEnter
         Send, {Enter}      ; Press Enter
     } else {
         ; Long press - single-click, paste, wait, Enter
         Click              ; Single click to select the content
         Sleep, DelayAfterClick
         Send, ^v           ; Paste clipboard content
-        Sleep, 700         ; Wait 500ms
+        Sleep, DelayAfterFirstEnter
         Send, {Enter}      ; Press Enter
     }
 return
@@ -44,11 +44,19 @@ SanitizeClipboard() {
         clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")  ; Remove "(HOD)" at the end
         clipboard := RegExReplace(clipboard, "Copy$")           ; Remove "Copy" if it's at the end
         ; Add more patterns if needed
+    } else {
+        clipboard := ""  ; Clear the clipboard if it's empty or invalid
     }
 }
 
-; Override the Tab key to single-click, delay, single-click, delay, double-click, and then copy
-Tab::
+CapsLock::
+    Send, ^!{CapsLock}
+    cancelState := false
+    ShowTooltip("Sell All")
+return
+
+; C key hotkey
+C::
     Click             ; First single click
     Sleep, DelayAfterClick
     Click             ; Second single click
@@ -56,7 +64,7 @@ Tab::
     Click 2           ; Double-click to select the text
     Sleep, DelayAfterDoubleClick
     Send, ^c          ; Copy the selected text
-    Sleep, 100        ; Small delay to ensure copy action is complete
+    Sleep, DelayAfterClick
     SanitizeClipboard()  ; Call function to clean up the clipboard content
 
     ; Display the clipboard content in a tooltip
@@ -65,61 +73,95 @@ Tab::
     Tooltip  ; Remove the tooltip
 return
 
-; Trading hotkeys with ShareX recording control
+; Define initial state variables
+cancelState := false
 
+; Sell keys
+XButton1::
+    Send, ^!c
+    cancelState := false
+    ShowTooltip("Cancel")
+return
 
+; Reset state with XButton2
+XButton2::
+    Send, ^!g
+    cancelState := false
+    ShowTooltip("+44")
+return
+
+; A key hotkey
 A::
-    Send, !a       
-    Send, {Pause}  ; Start recording
-    return
+    if (!cancelState) {
+        Send, ^!a
+        cancelState := true
+        tooltipMessage := "-88"
+    } else {
+        Send, ^!c
+        Sleep, cancelDelay
+        Send, ^!a
+        tooltipMessage := "c -88"
+    }
+    ShowTooltip(tooltipMessage)
+return
 
+; S key hotkey
 S::
-    Send, !g       
-    Sleep, 700
-    Send, !s       ; Presses Shift+S to sell half
-    Send, {Pause}  ; Start recording
-    return
+    if (!cancelState) {
+        Send, ^!s
+        cancelState := true
+        tooltipMessage := "-88"
+    } else {
+        Send, ^!c
+        Sleep, cancelDelay
+        Send, ^!s
+        tooltipMessage := "c-88"
+    }
+    ShowTooltip(tooltipMessage)
+return
 
+; D key hotkey
 D::
-    Send, !g       ; Presses Shift+C to cancel orders
-    Sleep, cancelDelay
-    Send, !d       ; Presses Shift+D to sell at ask
-    Send, {Pause}  ; Start recording
-    return
+    if (!cancelState) {
+        Send, ^!d
+        cancelState := true
+        tooltipMessage := "-44"
+    } else {
+        Send, ^!c
+        Sleep, cancelDelay
+        Send, ^!d
+        tooltipMessage := "c-44"
+    }
+    ShowTooltip(tooltipMessage)
+return
 
-E::
-    Send, !g       ; Presses Shift+C to cancel orders
-    Sleep, cancelDelay
-    Send, !e       ; Presses Shift+S to sell half
-    Send, {Pause}  ; Start recording
-    return
-
-Space::
-    Send, !g       ; Presses Shift+C to cancel orders
-    Sleep, cancelDelay
-    Send, !e
-    return
-
-
-W::
-    Send, !g       ; Presses Shift+C to cancel orders
-    Sleep, cancelDelay
-    Send, !w       ; Presses Shift+D to sell at ask
-    Send, {Pause}  ; Start recording
-    return
-
+; F key hotkey
 F::
-    Send, !f       ; Presses Shift+F to close position
-    Send, {Pause}  ; Start recording
-    return
+    if (!cancelState) {
+        Send, ^!f
+        cancelState := true
+        tooltipMessage := "-44"
+    } else {
+        Send, ^!c
+        Sleep, cancelDelay
+        Send, ^!f
+        tooltipMessage := "c-44"
+    }
+    ShowTooltip(tooltipMessage)
+return
 
-G::
-    Send, !g       ; Presses Alt+C
-    return
 
 
-; Press Ctrl+Alt+S to toggle suspend for the entire script with feedback
-^!s::
+; Function to display a tooltip
+ShowTooltip(message) {
+    ToolTip, %message%
+    Sleep, 1000  ; Tooltip stays visible for 1 second
+    ToolTip  ; Clear the tooltip
+}
+
+
+; Press Shift+Alt+P to toggle suspend for the entire script with feedback
++!s::
 Suspend, Toggle
 IsSuspended := !IsSuspended  ; Toggle the suspension state
 if (IsSuspended) {
@@ -127,6 +169,6 @@ if (IsSuspended) {
 } else {
     Tooltip, Script Active
 }
-Sleep 1000  ; Display the tooltip briefly
+Sleep, 1000  ; Display the tooltip briefly
 Tooltip  ; Remove the tooltip
 return
