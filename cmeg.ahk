@@ -5,7 +5,7 @@ DelayAfterDoubleClick := 250  ; Delay after double-click before copying
 DelayBeforeDoubleClick := 100  ; New delay before the double-click
 
 ; Delay time for canceling orders in trading hotkeys
-cancelDelay := 1100  ; Adjust as needed
+cancelDelay := 100  ; Adjust as needed
 
 ; Define the threshold for a long press (e.g., 500ms)
 LongPressThreshold := 500
@@ -49,11 +49,7 @@ SanitizeClipboard() {
     }
 }
 
-CapsLock::
-    Send, ^!{CapsLock}
-    cancelState := false
-    ShowTooltip("Sell All")
-return
+
 
 ; C key hotkey
 C::
@@ -73,6 +69,9 @@ C::
     Tooltip  ; Remove the tooltip
 return
 
+
+
+
 ; Define initial state variables
 cancelState := false
 
@@ -88,6 +87,14 @@ XButton2::
     Send, ^!g
     cancelState := false
     ShowTooltip("+44")
+    
+return
+
+CapsLock::
+    Send, ^!{CapsLock}
+    cancelState := false
+    ShowTooltip("Sell All")
+    
 return
 
 ; A key hotkey
@@ -102,6 +109,7 @@ A::
         Send, ^!a
         tooltipMessage := "c -88"
     }
+    
     ShowTooltip(tooltipMessage)
 return
 
@@ -117,6 +125,7 @@ S::
         Send, ^!s
         tooltipMessage := "c-88"
     }
+    
     ShowTooltip(tooltipMessage)
 return
 
@@ -132,6 +141,7 @@ D::
         Send, ^!d
         tooltipMessage := "c-44"
     }
+    
     ShowTooltip(tooltipMessage)
 return
 
@@ -147,10 +157,9 @@ F::
         Send, ^!f
         tooltipMessage := "c-44"
     }
+    
     ShowTooltip(tooltipMessage)
 return
-
-
 
 ; Function to display a tooltip
 ShowTooltip(message) {
@@ -159,16 +168,15 @@ ShowTooltip(message) {
     ToolTip  ; Clear the tooltip
 }
 
-
 ; Press Shift+Alt+P to toggle suspend for the entire script with feedback
 +!s::
-Suspend, Toggle
-IsSuspended := !IsSuspended  ; Toggle the suspension state
-if (IsSuspended) {
-    Tooltip, Script Suspended
-} else {
-    Tooltip, Script Active
-}
-Sleep, 1000  ; Display the tooltip briefly
-Tooltip  ; Remove the tooltip
+    Suspend, Toggle
+    IsSuspended := !IsSuspended  ; Toggle the suspension state
+    if (IsSuspended) {
+        Tooltip, Script Suspended
+    } else {
+        Tooltip, Script Active
+    }
+    Sleep, 1000  ; Display the tooltip briefly
+    Tooltip  ; Remove the tooltip
 return
