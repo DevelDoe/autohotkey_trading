@@ -5,7 +5,7 @@ DelayAfterDoubleClick := 250  ; Delay after double-click before copying
 DelayBeforeDoubleClick := 100  ; New delay before the double-click
 
 ; Delay time for canceling orders in trading hotkeys
-cancelDelay := 100  ; Adjust as needed
+cancelDelay := 1000  ; Adjust as needed
 
 ; Define the threshold for a long press (e.g., 500ms)
 LongPressThreshold := 500
@@ -39,15 +39,19 @@ return
 
 ; Sanitize clipboard content by removing unwanted text (e.g., "HOD")
 SanitizeClipboard() {
-    ClipWait, 1  ; Wait for clipboard to contain data
+    ClipWait, 1
     if (!ErrorLevel) {
-        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")  ; Remove "(HOD)" at the end
-        clipboard := RegExReplace(clipboard, "Copy$")           ; Remove "Copy" if it's at the end
-        ; Add more patterns if needed
+        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")
+        clipboard := RegExReplace(clipboard, "Copy$")
+        ; Add a safety check for very large clipboard content
+        if (StrLen(clipboard) > 1000) {
+            clipboard := SubStr(clipboard, 1, 1000)  ; Truncate to a reasonable size
+        }
     } else {
-        clipboard := ""  ; Clear the clipboard if it's empty or invalid
+        clipboard := ""  ; Clear the clipboard if invalid
     }
 }
+
 
 
 
@@ -74,90 +78,132 @@ return
 
 ; Define initial state variables
 cancelState := false
+base = true  ; Initial value for toggling
+parabolicMode := false  ; New toggle for parabolic mode
 
-; Sell keys
-XButton1::
+; Mouse Wheel Up - Switch to 88
+WheelUp::
+    base := false
+    SoundBeep, 750  ; Higher pitch for double mode
+    ShowTooltip("Mode: double")
+return
+
+WheelDown::
+    base := true
+    SoundBeep, 500  ; Lower pitch for base mode
+    ShowTooltip("Mode: base")
+return
+
+; Toggle Parabolic Mode with H
+G::
+    parabolicMode := !parabolicMode  ; Toggle parabolic mode
+    if (parabolicMode) {
+        SoundBeep, 900  ; Higher pitch for parabolic mode
+        ShowTooltip("Parabolic Mode: ON")
+    } else {
+        SoundBeep, 400  ; Lower pitch for normal mode
+        ShowTooltip("Parabolic Mode: OFF")
+    }
+return
+
+
+; XButton2 toggles between buy orders with g and h
+XButton2::
+    if (parabolicMode) {
+        if (base) {
+            Send, +!g  ; Shift+Alt+g for base mode
+            ShowTooltip("Parabolic +44")
+        } else {
+            Send, +!h  ; Shift+Alt+h for double mode
+            ShowTooltip("Parabolic +88")
+        }
+    } else {
+        if (base) {
+            Send, ^!g  ; Ctrl+Alt+g for base mode
+            ShowTooltip("+44")
+        } else {
+            Send, ^!h  ; Ctrl+Alt+h for double mode
+            ShowTooltip("+88")
+        }
+    }
+    cancelState := false
+return
+
+; A key hotkey
+A::
+    Send, ^!{CapsLock}
+    cancelState := false
+    ShowTooltip("clx")
+return
+
+; S key hotkey
+S::
     Send, ^!c
     cancelState := false
     ShowTooltip("Cancel")
 return
 
-; Reset state with XButton2
-XButton2::
-    Send, ^!g
-    cancelState := false
-    ShowTooltip("+44")
-    
-return
-
-CapsLock::
-    Send, ^!{CapsLock}
-    cancelState := false
-    ShowTooltip("Sell All")
-    
-return
-
-; A key hotkey
-A::
-    if (!cancelState) {
-        Send, ^!a
-        cancelState := true
-        tooltipMessage := "-88"
-    } else {
-        Send, ^!c
-        Sleep, cancelDelay
-        Send, ^!a
-        tooltipMessage := "c -88"
-    }
-    
-    ShowTooltip(tooltipMessage)
-return
-
-; S key hotkey
-S::
-    if (!cancelState) {
-        Send, ^!s
-        cancelState := true
-        tooltipMessage := "-88"
-    } else {
-        Send, ^!c
-        Sleep, cancelDelay
-        Send, ^!s
-        tooltipMessage := "c-88"
-    }
-    
-    ShowTooltip(tooltipMessage)
-return
-
 ; D key hotkey
 D::
-    if (!cancelState) {
-        Send, ^!d
-        cancelState := true
-        tooltipMessage := "-44"
+    if (base) {
+        ; Base mode behavior
+        if (!cancelState) {
+            Send, ^!d
+            cancelState := true
+            tooltipMessage := "-44"
+        } else {
+            Send, ^!c
+            Sleep, cancelDelay
+            Send, ^!d
+            tooltipMessage := "c-44"
+            cancelState := false
+        }
     } else {
-        Send, ^!c
-        Sleep, cancelDelay
-        Send, ^!d
-        tooltipMessage := "c-44"
+        ; Double mode behavior (previously A key)
+        if (!cancelState) {
+            Send, ^!a
+            cancelState := true
+            tooltipMessage := "-88"
+        } else {
+            Send, ^!c
+            Sleep, cancelDelay
+            Send, ^!a
+            tooltipMessage := "c-88"
+            cancelState := false
+        }
     }
-    
     ShowTooltip(tooltipMessage)
 return
 
 ; F key hotkey
 F::
-    if (!cancelState) {
-        Send, ^!f
-        cancelState := true
-        tooltipMessage := "-44"
+    if (base) {
+        ; Base mode behavior
+        if (!cancelState) {
+            Send, ^!f
+            cancelState := true
+            tooltipMessage := "-44"
+        } else {
+            Send, ^!c
+            Sleep, cancelDelay
+            Send, ^!f
+            tooltipMessage := "c-44"
+            cancelState := false
+        }
     } else {
-        Send, ^!c
-        Sleep, cancelDelay
-        Send, ^!f
-        tooltipMessage := "c-44"
+        ; Double mode behavior (previously S key)
+        if (!cancelState) {
+            Send, ^!s
+            cancelState := true
+            tooltipMessage := "-88"
+        } else {
+            Send, ^!c
+            Sleep, cancelDelay
+            Send, ^!s
+            tooltipMessage := "c-88"
+            cancelState := false
+        }
     }
-    
     ShowTooltip(tooltipMessage)
 return
 
@@ -169,14 +215,16 @@ ShowTooltip(message) {
 }
 
 ; Press Shift+Alt+P to toggle suspend for the entire script with feedback
-+!s::
+Tab::  
     Suspend, Toggle
-    IsSuspended := !IsSuspended  ; Toggle the suspension state
+    IsSuspended := !IsSuspended
     if (IsSuspended) {
+        SoundBeep, 300  ; Low pitch for suspended
         Tooltip, Script Suspended
     } else {
+        SoundBeep, 600  ; High pitch for active
         Tooltip, Script Active
     }
-    Sleep, 1000  ; Display the tooltip briefly
-    Tooltip  ; Remove the tooltip
+    Sleep, 1000
+    Tooltip
 return
