@@ -1,18 +1,49 @@
-; Configurable delay times for middle mouse button actions
+; Configurable delay times for actions
 DelayAfterClick := 250
 DelayAfterFirstEnter := 500
-DelayAfterDoubleClick := 250  ; Delay after double-click before copying
-DelayBeforeDoubleClick := 100  ; New delay before the double-click
-
-; Delay time for canceling orders in trading hotkeys
-cancelDelay := 1000  ; Adjust as needed
-
-; Define the threshold for a long press (e.g., 500ms)
-LongPressThreshold := 500
+cancelDelay := 1000  ; Delay for canceling orders
 
 ; Start the script in suspended mode
 Suspend On
-IsSuspended := true  ; Ensure this matches the starting state
+IsSuspended := true  ; Match the starting state
+
+; Initialize variables
+parabolicMode := false  ; Default to Normal Mode
+XButton2_PressCount := 0  ; Track XButton2 presses
+
+
+; C key hotkey
+C::
+    Click             ; First single click
+    Sleep, DelayAfterClick
+    Click             ; Second single click
+    Sleep, DelayBeforeDoubleClick
+    Click 2           ; Double-click to select the text
+    Sleep, DelayAfterDoubleClick
+    Send, ^c          ; Copy the selected text
+    Sleep, DelayAfterClick
+    SanitizeClipboard()  ; Call function to clean up the clipboard content
+
+    ; Display the clipboard content in a tooltip
+    Tooltip, `n%clipboard%
+    Sleep, 2000  ; Tooltip will stay for 2 seconds
+    Tooltip  ; Remove the tooltip
+return
+
+; Sanitize clipboard content by removing unwanted text (e.g., "HOD")
+SanitizeClipboard() {
+    ClipWait, 1
+    if (!ErrorLevel) {
+        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")
+        clipboard := RegExReplace(clipboard, "Copy$")
+        ; Add a safety check for very large clipboard content
+        if (StrLen(clipboard) > 1000) {
+            clipboard := SubStr(clipboard, 1, 1000)  ; Truncate to a reasonable size
+        }
+    } else {
+        clipboard := ""  ; Clear the clipboard if invalid
+    }
+}
 
 ; Middle Mouse Button Functionality with short and long press detection
 MButton::
@@ -37,194 +68,105 @@ MButton::
     }
 return
 
-; Sanitize clipboard content by removing unwanted text (e.g., "HOD")
-SanitizeClipboard() {
-    ClipWait, 1
-    if (!ErrorLevel) {
-        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")
-        clipboard := RegExReplace(clipboard, "Copy$")
-        ; Add a safety check for very large clipboard content
-        if (StrLen(clipboard) > 1000) {
-            clipboard := SubStr(clipboard, 1, 1000)  ; Truncate to a reasonable size
-        }
-    } else {
-        clipboard := ""  ; Clear the clipboard if invalid
-    }
-}
 
-
-
-
-; C key hotkey
-C::
-    Click             ; First single click
-    Sleep, DelayAfterClick
-    Click             ; Second single click
-    Sleep, DelayBeforeDoubleClick
-    Click 2           ; Double-click to select the text
-    Sleep, DelayAfterDoubleClick
-    Send, ^c          ; Copy the selected text
-    Sleep, DelayAfterClick
-    SanitizeClipboard()  ; Call function to clean up the clipboard content
-
-    ; Display the clipboard content in a tooltip
-    Tooltip, `n%clipboard%
-    Sleep, 2000  ; Tooltip will stay for 2 seconds
-    Tooltip  ; Remove the tooltip
-return
-
-
-
-
-; Define initial state variables
-cancelState := false
-base = true  ; Initial value for toggling
-parabolicMode := false  ; New toggle for parabolic mode
-
-; Mouse Wheel Up - Switch to 88
-WheelUp::
-    base := false
-    SoundBeep, 750  ; Higher pitch for double mode
-    ShowTooltip("Mode: double")
-return
-
-WheelDown::
-    base := true
-    SoundBeep, 500  ; Lower pitch for base mode
-    ShowTooltip("Mode: base")
-return
-
-; Toggle Parabolic Mode with H
-G::
-    parabolicMode := !parabolicMode  ; Toggle parabolic mode
-    if (parabolicMode) {
-        SoundBeep, 900  ; Higher pitch for parabolic mode
-        ShowTooltip("Parabolic Mode: ON")
-    } else {
-        SoundBeep, 400  ; Lower pitch for normal mode
-        ShowTooltip("Parabolic Mode: OFF")
-    }
-return
-
-
-; XButton2 toggles between buy orders with g and h
+; XButton2 toggles between Buy/Sell actions
 XButton2::
-    if (parabolicMode) {
-        if (base) {
-            Send, +!g  ; Shift+Alt+g for base mode
-            ShowTooltip("Parabolic +44")
+    XButton2_PressCount += 1
+
+    if (XButton2_PressCount = 1) {
+        ; First press: Buy High
+        if (parabolicMode) {
+            Send, +!h  ; Shift+Alt+H for Buy High
+            ShowTooltip("Parabolic BUY HIGH - Press Count: " . XButton2_PressCount)
         } else {
-            Send, +!h  ; Shift+Alt+h for double mode
-            ShowTooltip("Parabolic +88")
+            Send, ^!h  ; Ctrl+Alt+H for Buy High
+            ShowTooltip("Normal BUY HIGH - Press Count: " . XButton2_PressCount)
+        }
+    } else if (XButton2_PressCount = 2) {
+        ; Second press: Sell High -> Buy Low
+        if (parabolicMode) {
+            Send, ^!a  ; Shift+Alt+D for Sell High
+            Sleep, cancelDelay
+            Send, +!g  ; Shift+Alt+G for Buy Low
+            ShowTooltip("Parabolic SELL HIGH -> BUY LOW - Press Count: " . XButton2_PressCount)
+        } else {
+            Send, ^!a  ; Ctrl+Alt+S for Sell High
+            Sleep, cancelDelay
+            Send, ^!g  ; Ctrl+Alt+G for Buy Low
+            ShowTooltip("Normal SELL HIGH -> BUY LOW - Press Count: " . XButton2_PressCount)
         }
     } else {
-        if (base) {
-            Send, ^!g  ; Ctrl+Alt+g for base mode
-            ShowTooltip("+44")
+        ; Subsequent presses: Sell Low -> Buy Low
+        if (parabolicMode) {
+            Send, ^!d  ; Shift+Alt+D for Sell Low
+            Sleep, cancelDelay
+            Send, +!g  ; Shift+Alt+G for Buy Low
+            ShowTooltip("Parabolic SELL LOW -> BUY LOW - Press Count: " . XButton2_PressCount)
         } else {
-            Send, ^!h  ; Ctrl+Alt+h for double mode
-            ShowTooltip("+88")
+            Send, ^!d  ; Ctrl+Alt+D for Sell Low
+            Sleep, cancelDelay
+            Send, ^!g  ; Ctrl+Alt+G for Buy Low
+            ShowTooltip("Normal SELL LOW -> BUY LOW - Press Count: " . XButton2_PressCount)
         }
     }
-    cancelState := false
 return
 
-; A key hotkey
+; Toggle Parabolic Mode 
 A::
-    Send, ^!{CapsLock}
-    cancelState := false
-    ShowTooltip("clx")
+    parabolicMode := !parabolicMode
+    if (parabolicMode) {
+        SoundBeep, 900  ; Higher pitch for Parabolic Mode
+        ShowTooltip("Parabolic Mode")
+    } else {
+        SoundBeep, 400  ; Lower pitch for Normal Mode
+        ShowTooltip("Normal Mode")
+    }
 return
 
-; S key hotkey
+; canceling orders
 S::
     Send, ^!c
-    cancelState := false
-    ShowTooltip("Cancel")
+    XButton2_PressCount := 0
+    ShowTooltip("CANCEL ORDERS")
 return
 
-; D key hotkey
-D::
-    if (base) {
-        ; Base mode behavior
-        if (!cancelState) {
-            Send, ^!d
-            cancelState := true
-            tooltipMessage := "-44"
-        } else {
-            Send, ^!c
-            Sleep, cancelDelay
-            Send, ^!d
-            tooltipMessage := "c-44"
-            cancelState := false
-        }
-    } else {
-        ; Double mode behavior (previously A key)
-        if (!cancelState) {
-            Send, ^!a
-            cancelState := true
-            tooltipMessage := "-88"
-        } else {
-            Send, ^!c
-            Sleep, cancelDelay
-            Send, ^!a
-            tooltipMessage := "c-88"
-            cancelState := false
-        }
-    }
-    ShowTooltip(tooltipMessage)
-return
-
-; F key hotkey
+; Sell low
 F::
-    if (base) {
-        ; Base mode behavior
-        if (!cancelState) {
-            Send, ^!f
-            cancelState := true
-            tooltipMessage := "-44"
-        } else {
-            Send, ^!c
-            Sleep, cancelDelay
-            Send, ^!f
-            tooltipMessage := "c-44"
-            cancelState := false
-        }
+    Send, ^!f  ; Ctrl+Alt+D for Sell Low
+    ShowTooltip("SELL LOW ASK")
+return
+
+; Sell to market
+D::
+    Send, +!q
+    XButton2_PressCount := 0
+    ShowTooltip("CLOSE")
+return
+
+; R key sends Alt+H
+R::
+    Send, !h
+return
+
+; Toggle Suspend with A
+Tab::
+    Suspend, Toggle
+    IsSuspended := !IsSuspended
+    XButton2_PressCount := 0
+    if (IsSuspended) {
+        SoundBeep, 300  ; Low pitch for suspended
+        ShowTooltip("Suspended")
     } else {
-        ; Double mode behavior (previously S key)
-        if (!cancelState) {
-            Send, ^!s
-            cancelState := true
-            tooltipMessage := "-88"
-        } else {
-            Send, ^!c
-            Sleep, cancelDelay
-            Send, ^!s
-            tooltipMessage := "c-88"
-            cancelState := false
-        }
+        SoundBeep, 600  ; High pitch for active
+        ShowTooltip("Active")
     }
-    ShowTooltip(tooltipMessage)
+    Sleep, 1000
+    Tooltip
 return
 
 ; Function to display a tooltip
 ShowTooltip(message) {
     ToolTip, %message%
-    Sleep, 1000  ; Tooltip stays visible for 1 second
+    Sleep, 2000  ; Tooltip stays visible for 1 second
     ToolTip  ; Clear the tooltip
 }
-
-; Press Shift+Alt+P to toggle suspend for the entire script with feedback
-Tab::  
-    Suspend, Toggle
-    IsSuspended := !IsSuspended
-    if (IsSuspended) {
-        SoundBeep, 300  ; Low pitch for suspended
-        Tooltip, Script Suspended
-    } else {
-        SoundBeep, 600  ; High pitch for active
-        Tooltip, Script Active
-    }
-    Sleep, 1000
-    Tooltip
-return
