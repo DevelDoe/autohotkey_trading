@@ -1,7 +1,8 @@
 ; Configurable delay times for actions
 DelayAfterClick := 250
 DelayAfterFirstEnter := 500
-cancelDelay := 1000  ; Delay for canceling orders
+cancelDelay := 1005  ; Delay for canceling orders
+orderDelay := 1500
 
 ; Start the script in suspended mode
 Suspend On
@@ -10,6 +11,7 @@ IsSuspended := true  ; Match the starting state
 ; Initialize variables
 parabolicMode := false  ; Default to Normal Mode
 XButton2_PressCount := 0  ; Track XButton2 presses
+sell_PressCount := 0
 
 
 ; C key hotkey
@@ -72,6 +74,7 @@ return
 ; XButton2 toggles between Buy/Sell actions
 XButton2::
     XButton2_PressCount += 1
+    sell_PressCount := 0
 
     if (XButton2_PressCount = 1) {
         ; First press: Buy High
@@ -86,12 +89,12 @@ XButton2::
         ; Second press: Sell High -> Buy Low
         if (parabolicMode) {
             Send, ^!a  ; Shift+Alt+D for Sell High
-            Sleep, cancelDelay
+            Sleep, orderDelay
             Send, +!g  ; Shift+Alt+G for Buy Low
             ShowTooltip("Parabolic SELL HIGH -> BUY LOW - Press Count: " . XButton2_PressCount)
         } else {
             Send, ^!a  ; Ctrl+Alt+S for Sell High
-            Sleep, cancelDelay
+            Sleep, orderDelay
             Send, ^!g  ; Ctrl+Alt+G for Buy Low
             ShowTooltip("Normal SELL HIGH -> BUY LOW - Press Count: " . XButton2_PressCount)
         }
@@ -99,12 +102,12 @@ XButton2::
         ; Subsequent presses: Sell Low -> Buy Low
         if (parabolicMode) {
             Send, ^!d  ; Shift+Alt+D for Sell Low
-            Sleep, cancelDelay
+            Sleep, orderDelay
             Send, +!g  ; Shift+Alt+G for Buy Low
             ShowTooltip("Parabolic SELL LOW -> BUY LOW - Press Count: " . XButton2_PressCount)
         } else {
             Send, ^!d  ; Ctrl+Alt+D for Sell Low
-            Sleep, cancelDelay
+            Sleep, orderDelay
             Send, ^!g  ; Ctrl+Alt+G for Buy Low
             ShowTooltip("Normal SELL LOW -> BUY LOW - Press Count: " . XButton2_PressCount)
         }
@@ -127,20 +130,34 @@ return
 S::
     Send, ^!c
     XButton2_PressCount := 0
+    sell_PressCount := 0
     ShowTooltip("CANCEL ORDERS")
+return
+
+; Sell 
+D::
+    Send, +!q
+    sell_PressCount := 0
+    ShowTooltip("CLOSE")
 return
 
 ; Sell low
 F::
+    if (sell_PressCount > 0) {
+        Send, ^!c
+        Sleep, cancelDelay
+    } 
+    
     Send, ^!f  ; Ctrl+Alt+D for Sell Low
     ShowTooltip("SELL LOW ASK")
+    sell_PressCount += 1
 return
 
-; Sell to market
-D::
-    Send, +!q
+G::
+    Send, ^!a
     XButton2_PressCount := 0
-    ShowTooltip("CLOSE")
+    sell_PressCount += 1
+    ShowTooltip("SELL HIGH Ask")
 return
 
 ; R key sends Alt+H
@@ -167,6 +184,6 @@ return
 ; Function to display a tooltip
 ShowTooltip(message) {
     ToolTip, %message%
-    Sleep, 2000  ; Tooltip stays visible for 1 second
+    Sleep, 500  ; Tooltip stays visible for 1 second
     ToolTip  ; Clear the tooltip
 }
