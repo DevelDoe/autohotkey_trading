@@ -389,3 +389,246 @@ ShowTooltip(message) {
     Sleep, 500  ; Tooltip stays visible for 1 second
     ToolTip  ; Clear the tooltip
 }
+
+
+
+
+
+; Configurable delay times for actions
+DelayAfterClick := 250
+DelayAfterFirstEnter := 500
+cancelDelay := 1005  ; Delay for canceling orders
+orderDelay := 1500
+
+; Start the script in suspended mode
+Suspend On
+IsSuspended := true  ; Match the starting state
+
+; modes
+parabolicMode := false  ; Default to Breakout Mode
+scalpingMode := false  ; Default to Breakout Mode
+currentMode := "Breakout" ; Track the current mode
+
+; counters
+global XButton2_PressCount := 0
+global sell_PressCount := 0
+
+; Initialize GUI for displaying counters and states
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: Breakout
+Gui, +AlwaysOnTop +ToolWindow -Caption
+Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+
+; Function to update the GUI display
+UpdateDisplay() {
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
+    GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
+    GuiControl,, SellPressText, % "S: " . sell_PressCount
+    GuiControl,, ModeText, % "Mode: " . currentMode  ; Correctly update the mode display
+}
+
+; XButton2 toggles between Buy/Sell actions
+XButton2::
+    global scalpingMode, parabolicMode, currentMode, XButton2_PressCount, sell_PressCount
+
+    if (scalpingMode) {
+        ; Determine action based on press count in Scalping Mode
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+    } else if (parabolicMode) {
+        ; Parabolic Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, +!h                                       ; Buy High ask 0.15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low 0.15
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low ask 0.15
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else {
+        ; Breakout Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!h                                       ; Buy High ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    }
+
+    UpdateDisplay()
+    
+return
+
+; Toggle Parabolic Mode
+G::
+    global parabolicMode, scalpingMode, currentMode
+    parabolicMode := !parabolicMode
+    scalpingMode := false  ; Ensure Scalping Mode is off
+    currentMode := parabolicMode ? "Parabolic" : "Breakout"
+    SoundBeep, % (parabolicMode ? 900 : 400)  ; Higher pitch for On, lower for Off
+    UpdateDisplay()
+    ShowTooltip(parabolicMode ? "Parabolic Mode On" : "Parabolic Mode Off")
+return
+
+; Toggle Scalping Mode with H key
+V::
+    global scalpingMode, parabolicMode, currentMode
+    scalpingMode := !scalpingMode
+    parabolicMode := false  ; Ensure Parabolic Mode is off
+    currentMode := scalpingMode ? "Scalping" : "Breakout"
+    SoundBeep, % (scalpingMode ? 1000 : 500)  ; Higher pitch for On, lower for Off
+    UpdateDisplay()
+    ShowTooltip(scalpingMode ? "Scalping Mode On" : "Scalping Mode Off")
+return
+
+; Cancel orders and reset press counts
+A::
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!c
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    UpdateDisplay()
+    ShowTooltip("CANCEL ORDERS")
+return
+
+; Sell actions
+S::
+    global XButton2_PressCount, sell_PressCount
+    Send, +!q
+    sell_PressCount := 0
+    XButton2_PressCount := 0
+    UpdateDisplay()
+    ShowTooltip("CLOSE POS")
+return
+
+D::
+    global XButton2_PressCount, sell_PressCount
+    if (sell_PressCount > 0) {
+        Send, ^!c
+        Sleep, cancelDelay
+    }
+    Send, ^!f
+    sell_PressCount += 1
+    XButton2_PressCount := 0
+    UpdateDisplay()
+    ShowTooltip("SELL LOW ASK")
+return
+
+F::
+    global XButton2_PressCount, sell_PressCount
+    if (sell_PressCount > 0) {
+        Send, ^!c
+        Sleep, cancelDelay
+    }
+    Send, ^!s
+    sell_PressCount += 1
+    XButton2_PressCount := 0
+    UpdateDisplay()
+    ShowTooltip("SELL HIGH ASK")
+return
+
+; Toggle Suspend with Tab
+Tab::
+    global XButton2_PressCount, sell_PressCount, IsSuspended
+    Suspend, Toggle
+    IsSuspended := !IsSuspended
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    UpdateDisplay()
+    SoundBeep, % (IsSuspended ? 300 : 600)  ; Low pitch for Suspended, high pitch for Active
+    ShowTooltip(IsSuspended ? "Script Suspended" : "Script Active")
+return
+
+; Function to display a tooltip
+ShowTooltip(message) {
+    ToolTip, %message%
+    Sleep, 500  ; Tooltip stays visible for 0.5 seconds
+    ToolTip  ; Clear the tooltip
+}
+
+
+
+
+; Copy past
+
+; C key hotkey
+CapsLock::
+    Click             ; First single click
+    Sleep, DelayAfterClick
+    Click             ; Second single click
+    Sleep, DelayBeforeDoubleClick
+    Click 2           ; Double-click to select the text
+    Sleep, DelayAfterDoubleClick
+    Send, ^c          ; Copy the selected text
+    Sleep, DelayAfterClick
+    SanitizeClipboard()  ; Call function to clean up the clipboard content
+
+    ; Display the clipboard content in a tooltip
+    Tooltip, `n%clipboard%
+    Sleep, 2000  ; Tooltip will stay for 2 seconds
+    Tooltip  ; Remove the tooltip
+return
+
+; Sanitize clipboard content by removing unwanted text (e.g., "HOD")
+SanitizeClipboard() {
+    ClipWait, 1
+    if (!ErrorLevel) {
+        ; Remove unwanted text patterns
+        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")  ; Remove "(HOD)" at the end
+        clipboard := RegExReplace(clipboard, "Copy$")           ; Remove "Copy" at the end
+        clipboard := RegExReplace(clipboard, "\*$")            ; Remove trailing "*"
+        
+        ; Add a safety check for very large clipboard content
+        if (StrLen(clipboard) > 1000) {
+            clipboard := SubStr(clipboard, 1, 1000)  ; Truncate to a reasonable size
+        }
+    } else {
+        clipboard := ""  ; Clear the clipboard if invalid
+    }
+}
+
+; clicks
+
+; Middle Mouse Button Functionality with short and long press detection
+MButton::
+    PressStartTime := A_TickCount  ; Record the time when MButton is pressed
+    KeyWait, MButton  ; Wait for the button to be released
+    PressDuration := A_TickCount - PressStartTime  ; Calculate press duration
+
+    if (PressDuration < LongPressThreshold) {
+        ; Short press - double-click, paste, wait, Enter
+        Click 2            ; Double-click to select the content
+        Sleep, DelayAfterClick
+        Send, ^v           ; Paste clipboard content
+        Sleep, DelayAfterFirstEnter
+        Send, {Enter}      ; Press Enter
+    } else {
+        ; Long press - single-click, paste, wait, Enter
+        Click              ; Single click to select the content
+        Sleep, DelayAfterClick
+        Send, ^v           ; Paste clipboard content
+        Sleep, DelayAfterFirstEnter
+        Send, {Enter}      ; Press Enter
+    }
+return
