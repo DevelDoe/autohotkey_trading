@@ -8,12 +8,40 @@ IsSuspended := true  ; Match the starting state
 
 ; Modes
 parabolicMode := false  ; Default to Breakout Mode
-scalpingMode := false  ; Default to Breakout Mode
-currentMode := "Breakout" ; Track the current mode
+scalpingMode := true    ; Default to Scalping Mode
+currentMode := "Scalping" ; Track the current mode
 
 ; Counters
 global XButton2_PressCount := 0
 global sell_PressCount := 0
+
+; Reset function to restore the script to its initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+    global parabolicMode, scalpingMode, currentMode
+
+    ; Reset counters
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+
+    ; Reset modes
+    parabolicMode := false
+    scalpingMode := true
+    currentMode := "Scalping"
+
+    ; Update GUI to reflect the initial state
+    UpdateDisplay()
+
+    ; Double beep to indicate reset
+    SoundBeep, 700, 150  ; First beep
+    Sleep, 100           ; Short delay between beeps
+    SoundBeep, 700, 150  ; Second beep
+}
+
+; Hotkey to invoke the reset function
+R::
+    ResetScript()
+return
 
 ; Initialize GUI for displaying counters and states
 Gui, Font, s10 Bold, Arial
@@ -21,7 +49,7 @@ Gui, Color, Black
 Gui, Add, Text, cWhite vScriptState w200, Suspended
 Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
 Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
-Gui, Add, Text, cWhite vModeText w200, Mode: Breakout
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
 Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
 
@@ -42,22 +70,47 @@ XButton2::
     global scalpingMode, parabolicMode, currentMode, XButton2_PressCount, sell_PressCount
 
     if (scalpingMode) {
-        action := (Mod(XButton2_PressCount, 2) = 0) ? "^!h" : "^!s"
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
     } else if (parabolicMode) {
+        ; Parabolic Mode Logic
         if (XButton2_PressCount = 0) {
-            action := "+!h"
+            Send, +!h                                       ; Buy High ask 0.15
         } else if (XButton2_PressCount = 1) {
-            action := "^!s"
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low 0.15
         } else {
-            action := "+!g"
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low ask 0.15
         }
+        XButton2_PressCount++
+        sell_PressCount := 0
     } else {
-        action := (XButton2_PressCount = 0) ? "^!h" : "^!f"
+        ; Breakout Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!h                                       ; Buy High ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
     }
 
-    Send, %action%
-    Sleep, DelayAfterClick
-    XButton2_PressCount++
+    ; Update GUI display
     UpdateDisplay()
 return
 
@@ -146,4 +199,3 @@ Tab::
     UpdateDisplay()
     SoundBeep, % (IsSuspended ? 300 : 600)  ; Low pitch for Suspended, high pitch for Active
 return
-
