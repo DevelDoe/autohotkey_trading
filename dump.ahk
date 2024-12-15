@@ -570,68 +570,6 @@ ShowTooltip(message) {
 
 
 
-; Copy past
-
-; C key hotkey
-CapsLock::
-    Click             ; First single click
-    Sleep, DelayAfterClick
-    Click             ; Second single click
-    Sleep, DelayBeforeDoubleClick
-    Click 2           ; Double-click to select the text
-    Sleep, DelayAfterDoubleClick
-    Send, ^c          ; Copy the selected text
-    Sleep, DelayAfterClick
-    SanitizeClipboard()  ; Call function to clean up the clipboard content
-
-    ; Display the clipboard content in a tooltip
-    Tooltip, `n%clipboard%
-    Sleep, 2000  ; Tooltip will stay for 2 seconds
-    Tooltip  ; Remove the tooltip
-return
-
-; Sanitize clipboard content by removing unwanted text (e.g., "HOD")
-SanitizeClipboard() {
-    ClipWait, 1
-    if (!ErrorLevel) {
-        ; Remove unwanted text patterns
-        clipboard := RegExReplace(clipboard, "\s*\(HOD\)\s*$")  ; Remove "(HOD)" at the end
-        clipboard := RegExReplace(clipboard, "Copy$")           ; Remove "Copy" at the end
-        clipboard := RegExReplace(clipboard, "\*$")            ; Remove trailing "*"
-        
-        ; Add a safety check for very large clipboard content
-        if (StrLen(clipboard) > 1000) {
-            clipboard := SubStr(clipboard, 1, 1000)  ; Truncate to a reasonable size
-        }
-    } else {
-        clipboard := ""  ; Clear the clipboard if invalid
-    }
-}
-
-; clicks
-
-; Middle Mouse Button Functionality with short and long press detection
-MButton::
-    PressStartTime := A_TickCount  ; Record the time when MButton is pressed
-    KeyWait, MButton  ; Wait for the button to be released
-    PressDuration := A_TickCount - PressStartTime  ; Calculate press duration
-
-    if (PressDuration < LongPressThreshold) {
-        ; Short press - double-click, paste, wait, Enter
-        Click 2            ; Double-click to select the content
-        Sleep, DelayAfterClick
-        Send, ^v           ; Paste clipboard content
-        Sleep, DelayAfterFirstEnter
-        Send, {Enter}      ; Press Enter
-    } else {
-        ; Long press - single-click, paste, wait, Enter
-        Click              ; Single click to select the content
-        Sleep, DelayAfterClick
-        Send, ^v           ; Paste clipboard content
-        Sleep, DelayAfterFirstEnter
-        Send, {Enter}      ; Press Enter
-    }
-return
 
 
 ; Configurable delay times for actions
@@ -811,3 +749,926 @@ Tab::
     SoundBeep, % (IsSuspended ? 300 : 600)  ; Low pitch for Suspended, high pitch for Active
 return
 
+
+
+
+
+
+
+; Configurable delay times for actions
+cancelDelay := 1005
+orderDelay := 1500
+
+; Start the script in suspended mode
+Suspend On
+IsSuspended := true  ; Match the starting state
+
+; Modes
+parabolicMode := false  ; Default to Breakout Mode
+scalpingMode := true    ; Default to Scalping Mode
+currentMode := "Scalping" ; Track the current mode
+
+; Counters
+global XButton2_PressCount := 0
+global sell_PressCount := 0
+
+; Reset function to restore the script to its initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+    global parabolicMode, scalpingMode, currentMode
+
+    ; Reset counters
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+
+    ; Reset modes
+    parabolicMode := false
+    scalpingMode := true
+    currentMode := "Scalping"
+
+    ; Update GUI to reflect the initial state
+    UpdateDisplay()
+
+    ; Double beep to indicate reset
+    SoundBeep, 700, 150  ; First beep
+    Sleep, 100           ; Short delay between beeps
+    SoundBeep, 700, 150  ; Second beep
+}
+
+; Hotkey to invoke the reset function
+R::
+    ResetScript()
+return
+
+; Initialize GUI for displaying counters and states
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, +AlwaysOnTop +ToolWindow -Caption
+Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+UpdateDisplay()
+
+; Function to update the GUI display
+UpdateDisplay() {
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
+    GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
+    GuiControl,, SellPressText, % "S: " . sell_PressCount
+    GuiControl,, ModeText, % "Mode: " . currentMode
+}
+
+; XButton2 toggles between Buy/Sell actions
+XButton2::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, currentMode, XButton2_PressCount, sell_PressCount
+
+    if (scalpingMode) {
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else if (parabolicMode) {
+        ; Parabolic Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, +!h                                       ; Buy High ask 0.15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low 0.15
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low ask 0.15
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else {
+        ; Breakout Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!h                                       ; Buy High ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    }
+
+    ; Update GUI display
+    UpdateDisplay()
+return
+
+; Toggle Parabolic Mode
+G::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global parabolicMode, scalpingMode, currentMode
+    parabolicMode := !parabolicMode
+    scalpingMode := false
+    currentMode := parabolicMode ? "Parabolic" : "Breakout"
+    UpdateDisplay()
+return
+
+; Toggle Scalping Mode
+V::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, currentMode
+    scalpingMode := !scalpingMode
+    parabolicMode := false
+    currentMode := scalpingMode ? "Scalping" : "Breakout"
+    UpdateDisplay()
+return
+
+; Cancel orders and reset press counts
+A::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!c
+    Sleep, cancelDelay
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    UpdateDisplay()
+return
+
+; Sell actions
+S::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, +!q
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    UpdateDisplay()
+return
+
+; SELL LOW ASK
+D::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!f
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; SELL HIGH ASK
+F::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!s
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; Toggle Suspend with Tab
+Tab::
+    global XButton2_PressCount, sell_PressCount, IsSuspended
+    Suspend, Toggle
+    IsSuspended := !IsSuspended
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    UpdateDisplay()
+    SoundBeep, % (IsSuspended ? 300 : 600)  ; Low pitch for Suspended, high pitch for Active
+return
+
+;#####################################
+
+; TODO
+; mode starter at .9/.4 then add .98/48 take half .55/.05 take half .60/.10  
+; Configurable delay times for actions
+cancelDelay := 1005
+orderDelay := 1500
+
+; Start the script in suspended mode
+Suspend On
+IsSuspended := true  ; Match the starting state
+
+; Modes
+parabolicMode := false  ; Default to Breakout Mode
+scalpingMode := true    ; Default to Scalping Mode
+currentMode := "Scalping" ; Track the current mode
+
+; Counters
+global XButton2_PressCount := 0
+global sell_PressCount := 0
+
+; Reset function to restore the script to its initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+
+    ; Reset counters
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+
+    ; Double beep to indicate reset
+    SoundBeep, 700, 150  ; First beep
+    Sleep, 100           ; Short delay between beeps
+    SoundBeep, 700, 150  ; Second beep
+
+    ; Call UpdateDisplay safely
+    UpdateDisplay()
+}
+
+; Initialize GUI for displaying counters and states
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, +AlwaysOnTop +ToolWindow -Caption
+Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+
+; Ensure GUI displays the initial state
+UpdateDisplay()
+
+; Function to update the GUI display
+UpdateDisplay() {
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
+    GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
+    GuiControl,, SellPressText, % "S: " . sell_PressCount
+    GuiControl,, ModeText, % "Mode: " . currentMode
+}
+
+; XButton2 toggles between Buy/Sell actions
+XButton2::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, currentMode, XButton2_PressCount, sell_PressCount
+
+    if (scalpingMode) {
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else if (parabolicMode) {
+        ; Parabolic Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, +!h                                       ; Buy High ask 0.15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low 0.15
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low ask 0.15
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else {
+        ; Breakout Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!h                                       ; Buy High ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    }
+
+    ; Update GUI display
+    UpdateDisplay()
+return
+
+; Toggle Parabolic Mode
+G::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global parabolicMode, scalpingMode, currentMode
+    parabolicMode := !parabolicMode
+    scalpingMode := false
+    currentMode := parabolicMode ? "Parabolic" : "Breakout"
+    UpdateDisplay()
+return
+
+; Toggle Scalping Mode
+V::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, currentMode
+    scalpingMode := !scalpingMode
+    parabolicMode := false
+    currentMode := scalpingMode ? "Scalping" : "Breakout"
+    UpdateDisplay()
+return
+
+; Cancel orders and reset press counts
+A::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, ^!c
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Sell actions
+S::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, +!q
+    ResetScript()
+return
+
+; SELL LOW ASK
+D::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!f
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; SELL HIGH ASK
+F::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!s
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; Toggle Suspend with Tab
+Tab::
+    global IsSuspended
+    Suspend, Toggle                        ; Toggle suspension state
+    if !IsSuspended {                      ; If the script is active (not suspended)
+        ResetScript()                      ; Reset the script to its initial state
+    }
+    IsSuspended := !IsSuspended            ; Flip the suspension flag
+    UpdateDisplay()                        ; Update the GUI to reflect the new state
+    SoundBeep, % (IsSuspended ? 300 : 600) ; Low pitch for Suspended, high pitch for Active
+return
+
+
+;$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+; if starter mode is better than make the parabolic be a reflection of it instead
+
+; Configurable delay times for actions
+cancelDelay := 1005
+orderDelay := 1500
+
+; Start the script in suspended mode
+Suspend On
+IsSuspended := true  ; Match the starting state
+
+; Modes
+parabolicMode := false  ; Default to Agressive Mode
+scalpingMode := true    ; Default to Scalping Mode
+starterMode := false    ; Default to Starter Mode (off)
+scaleMode := false      ; Default to Scale Mode (off)
+currentMode := "Scalping" ; Track the current mode
+
+; Counters
+global XButton2_PressCount := 0
+global sell_PressCount := 0
+
+; Reset function to restore the script to its initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+
+    ; Reset counters
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+
+    ; Double beep to indicate reset
+    SoundBeep, 700, 150  ; First beep
+    Sleep, 100           ; Short delay between beeps
+    SoundBeep, 700, 150  ; Second beep
+
+    ; Call UpdateDisplay safely
+    UpdateDisplay()
+}
+
+; Initialize GUI for displaying counters and states
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, +AlwaysOnTop +ToolWindow -Caption
+Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+
+; Ensure GUI displays the initial state
+UpdateDisplay()
+
+; Function to update the GUI display
+UpdateDisplay() {
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
+    GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
+    GuiControl,, SellPressText, % "S: " . sell_PressCount
+    GuiControl,, ModeText, % "Mode: " . currentMode
+}
+
+; XButton2 toggles between Buy/Sell actions
+XButton2::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, starterMode, currentMode, XButton2_PressCount, sell_PressCount
+
+    if (starterMode) {
+        ; Starter Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!g                                 ; Buy Low ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!n                                 ; Buy Trip ask .5
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!j                                 ; Sell Half
+        } else if (XButton2_PressCount = 3) {
+            Send, ^!m                                 ; Sell Half
+            ; Transition to Scale Mode
+            starterMode := false                      ; Deactivate Starter Mode
+            scaleMode := true                         ; Activate Scale Mode
+            currentMode := "Scale"                    ; Set current mode to Scale
+            XButton2_PressCount := -1                 ; Reset press count
+        }
+        XButton2_PressCount++
+    } else if (currentMode = "Scale") {
+        ; Recursive scaling logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!b    ; Step 1: Buy Smaller
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!g   ; Step 2: Buy Small
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!m    ; Step 3: Sell 75$
+        } else if (XButton2_PressCount = 3) {
+            Send, +!q    ; Step 4: Sell all
+        }
+        
+        ; Increment after action is completed
+        XButton2_PressCount++
+    
+        ; Reset after completing the full cycle
+        if (XButton2_PressCount > 3) {
+            XButton2_PressCount := 0  ; Reset count for the next cycle
+        }
+    }
+    
+     else if (scalpingMode) {
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else if (parabolicMode) {
+        ; Parabolic Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, +!h                                       ; Buy High ask 0.15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low 0.15
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, +!g                                       ; Buy Low ask 0.15
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else {
+        ; Agressive Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!h                                       ; Buy High ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        } else {
+            Send, ^!f                                       ; Sell Low ask -.01
+            Sleep, orderDelay
+            Send, ^!g                                       ; Buy Low ask .05
+        }
+        XButton2_PressCount++
+        sell_PressCount := 0
+    }
+
+    ; Update GUI display
+    UpdateDisplay()
+return
+
+; Toggle Agressive Mode
+G::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, starterMode, currentMode
+    if (currentMode = "Agressive") {
+        ; If already in Agressive mode, toggle back to Scalping
+        scalpingMode := true
+        parabolicMode := false
+        starterMode := false
+        currentMode := "Scalping"
+    } else {
+        ; Activate Agressive mode
+        scalpingMode := false
+        parabolicMode := false
+        starterMode := false
+        currentMode := "Agressive"
+    }
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Toggle Starter Mode
+V::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global starterMode, scalpingMode, parabolicMode, currentMode
+    if (currentMode = "Starter") {
+        ; If already in Starter mode, toggle back to Scalping
+        starterMode := false
+        scalpingMode := true
+        currentMode := "Scalping"
+    } else {
+        ; Activate Starter mode
+        starterMode := true
+        scalpingMode := false
+        parabolicMode := false
+        currentMode := "Starter"
+    }
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Toggle Parabolic Mode
+T::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global parabolicMode, scalpingMode, starterMode, currentMode
+    if (currentMode = "Parabolic") {
+        ; If already in Parabolic mode, toggle back to Scalping
+        parabolicMode := false
+        scalpingMode := true
+        currentMode := "Scalping"
+    } else {
+        ; Activate Parabolic mode
+        parabolicMode := true
+        scalpingMode := false
+        starterMode := false
+        currentMode := "Parabolic"
+    }
+    ResetScript()
+    UpdateDisplay()
+return
+
+
+; Cancel orders and reset press counts
+A::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, ^!c
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Sell actions
+S::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, +!q
+    ResetScript()
+return
+
+; SELL LOW ASK
+D::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!f
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; SELL HIGH ASK
+F::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!s
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; Toggle Suspend with Tab
+Tab::
+    global IsSuspended
+    Suspend, Toggle                        ; Toggle suspension state
+    if !IsSuspended {                      ; If the script is active (not suspended)
+        ; Reset modes to Scalping (default)
+        starterMode := false
+        parabolicMode := false
+        scalpingMode := true               ; Ensure scalping is the default mode
+        currentMode := "Scalping"          ; Update current mode to Scalping
+        ResetScript()                      ; Reset the script to its initial state
+    }
+    IsSuspended := !IsSuspended            ; Flip the suspension flag
+    UpdateDisplay()                        ; Update the GUI to reflect the new state
+    SoundBeep, % (IsSuspended ? 300 : 600) ; Low pitch for Suspended, high pitch for Active
+return
+
+
+; %%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+; Configurable delay times for actions
+cancelDelay := 1005
+orderDelay := 1500
+
+; Start the script in suspended mode
+Suspend On
+IsSuspended := true  ; Match the starting state
+
+; Modes
+parabolicMode := false  ; Default to Parabolic Mode (off)
+scalpingMode := true    ; Default to Scalping Mode
+starterMode := false    ; Default to Starter Mode (off)
+scaleMode := false      ; Default to Scale Mode (off)
+currentMode := "Scalping" ; Track the current mode
+
+; Counters
+global XButton2_PressCount := 0
+global sell_PressCount := 0
+
+; Reset function to restore the script to its initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+
+    ; Reset counters
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+
+    ; Double beep to indicate reset
+    SoundBeep, 700, 150  ; First beep
+    Sleep, 100           ; Short delay between beeps
+    SoundBeep, 700, 150  ; Second beep
+
+    ; Call UpdateDisplay safely
+    UpdateDisplay()
+}
+
+; Initialize GUI for displaying counters and states
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, +AlwaysOnTop +ToolWindow -Caption
+Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+
+; Ensure GUI displays the initial state
+UpdateDisplay()
+
+; Function to update the GUI display
+UpdateDisplay() {
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
+    GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
+    GuiControl,, SellPressText, % "S: " . sell_PressCount
+    GuiControl,, ModeText, % "Mode: " . currentMode
+}
+
+; XButton2 toggles between Buy/Sell actions
+XButton2::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global scalpingMode, parabolicMode, starterMode, currentMode, XButton2_PressCount, sell_PressCount
+
+    if (starterMode) {
+        ; Starter Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!g                                 ; Buy Low ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!n                                 ; Buy Trip ask .5
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!j                                 ; Sell Half
+        } else if (XButton2_PressCount = 3) {
+            Send, ^!m                                 ; Sell Half
+            ; Transition to Scale Mode
+            starterMode := false                      ; Deactivate Starter Mode
+            scaleMode := true                         ; Activate Scale Mode
+            currentMode := "Scale"                    ; Set current mode to Scale
+            XButton2_PressCount := -1                 ; Reset press count
+        }
+        XButton2_PressCount++
+    } else if (currentMode = "Scale") {
+        ; Recursive scaling logic
+        if (XButton2_PressCount = 0) {
+            Send, ^!b    ; Step 1: Buy Smaller
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!b   ; Step 2: Buy smaller
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!m    ; Sell 75%
+        } else if (XButton2_PressCount = 3) {
+            Send, +!q    ; Sell all
+        }
+        
+        ; Increment after action is completed
+        XButton2_PressCount++
+    
+        ; Reset after completing the full cycle
+        if (XButton2_PressCount > 3) {
+            XButton2_PressCount := 0  ; Reset count for the next cycle
+        }
+    } else if (scalpingMode) {
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+                : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
+    } else if (parabolicMode) {
+        ; Parabolic Mode Logic
+        if (XButton2_PressCount = 0) {
+            Send, +!h                                       ; Buy High ask 0.15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!s                                       ; Sell High ask -.01
+        } else if (XButton2_PressCount = 2) {
+            Send, +!g                                       ; Buy Low 0.15
+        } else if (XButton2_PressCount = 3) {
+            Send, ^!f                                       ; Sell Low ask -.01
+            XButton2_PressCount := -1                 ; Reset press count
+        }
+        XButton2_PressCount++
+    }
+
+    ; Update GUI display
+    UpdateDisplay()
+return
+
+; Toggle Scalping Mode
+V::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global starterMode, scalpingMode, parabolicMode, currentMode
+    scalpingMode := true
+    starterMode := false
+    parabolicMode := false
+    currentMode := "Scalping"
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Toggle Starter Mode
+G::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global starterMode, scalpingMode, parabolicMode, currentMode
+    starterMode := true
+    scalpingMode := false
+    parabolicMode := false
+    currentMode := "Starter"
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Toggle Parabolic Mode
+T::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global parabolicMode, scalpingMode, starterMode, currentMode
+    parabolicMode := true
+    scalpingMode := false
+    starterMode := false
+    currentMode := "Parabolic"
+    ResetScript()
+    UpdateDisplay()
+return
+
+
+
+; Cancel orders and reset press counts
+A::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, ^!c
+    ResetScript()
+    UpdateDisplay()
+return
+
+; Sell actions
+S::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    Send, +!q
+    ResetScript()
+return
+
+; SELL LOW ASK
+D::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!f
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; SELL HIGH ASK
+F::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!s
+    Sleep, DelayAfterClick
+    sell_PressCount++
+    XButton2_PressCount := 0
+    UpdateDisplay()
+return
+
+; Toggle Suspend with Tab
+Tab::
+    global IsSuspended
+    Suspend, Toggle                        ; Toggle suspension state
+    if !IsSuspended {                      ; If the script is active (not suspended)
+        ; Reset modes to Scalping (default)
+        starterMode := false
+        parabolicMode := false
+        scalpingMode := true               ; Ensure scalping is the default mode
+        currentMode := "Scalping"          ; Update current mode to Scalping
+        ResetScript()                      ; Reset the script to its initial state
+    }
+    IsSuspended := !IsSuspended            ; Flip the suspension flag
+    UpdateDisplay()                        ; Update the GUI to reflect the new state
+    SoundBeep, % (IsSuspended ? 300 : 600) ; Low pitch for Suspended, high pitch for Active
+return
