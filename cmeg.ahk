@@ -1,3 +1,7 @@
+; parabolic should be an mod that are active or unactive on its own
+; parabolic mode increases the offset of the other modes. 
+; rename it parabolicMod
+
 ; Configurable delay times for actions
 cancelDelay := 1005
 orderDelay := 1500
@@ -8,10 +12,10 @@ IsSuspended := true  ; Match the starting state
 
 ; Modes
 parabolicMode := false  ; Default to Parabolic Mode (off)
-scalpingMode := true    ; Default to Scalping Mode
-starterMode := false    ; Default to Starter Mode (off)
+scalpingMode := false    ; Default to Scalping Mode
+starterMode := true    ; Default to Starter Mode (off)
 scaleMode := false      ; Default to Scale Mode (off)
-currentMode := "Scalping" ; Track the current mode
+currentMode := "Starter" ; Track the current mode
 
 ; Counters
 global XButton2_PressCount := 0
@@ -50,11 +54,30 @@ UpdateDisplay()
 ; Function to update the GUI display
 UpdateDisplay() {
     global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+
+    ; Update the state (Suspended or Active)
     GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
     GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
     GuiControl,, SellPressText, % "S: " . sell_PressCount
+
+    ; Determine the color and font for the current mode
+    if (currentMode = "Scalping") {
+        modeColor := "Green"
+    } else if (currentMode = "Starter") {
+        modeColor := "Yellow"
+    } else if (currentMode = "Parabolic") {
+        modeColor := "Red"
+    } else {
+        modeColor := "White"
+    }
+
+    ; Set the font and color for the ModeText
+    Gui, Font, s10 Bold, Arial
+    GuiControl, +c%modeColor%, ModeText
     GuiControl,, ModeText, % "Mode: " . currentMode
 }
+
+
 
 ; XButton2 toggles between Buy/Sell actions
 XButton2::
@@ -203,7 +226,6 @@ D::
     Send, ^!f
     Sleep, DelayAfterClick
     sell_PressCount++
-    XButton2_PressCount := 0
     UpdateDisplay()
 return
 
@@ -226,10 +248,10 @@ Tab::
     Suspend, Toggle                        ; Toggle suspension state
     if !IsSuspended {                      ; If the script is active (not suspended)
         ; Reset modes to Scalping (default)
-        starterMode := false
+        starterMode := true
         parabolicMode := false
-        scalpingMode := true               ; Ensure scalping is the default mode
-        currentMode := "Scalping"          ; Update current mode to Scalping
+        scalpingMode := false               ; Ensure scalping is the default mode
+        currentMode := "Starter"          ; Update current mode to Scalping
         ResetScript()                      ; Reset the script to its initial state
     }
     IsSuspended := !IsSuspended            ; Flip the suspension flag
