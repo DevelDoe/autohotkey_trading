@@ -1,0 +1,15 @@
+^!b ; Buy Small ask .05
+^!g ; Buy Low ask .05
+^!h ; Buy High ask .05
+^!n ; Buy Trip ask .5
+
+^!l ; Buy Small ask 0.15
++!g ; Buy Low ask .15
++!h ; Buy Hight ask .15
+^!i ; Buy Trip ask .15
+
+^!f ; Sell Low ask -.01
+^!s ; Sell High ask .01
+^!m ; Sell 75% 
+^!j ; Sell Half
++!q ; Sell all

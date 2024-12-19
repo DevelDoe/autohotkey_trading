@@ -1,44 +1,34 @@
-; parabolic should be an mod that are active or unactive on its own
-; parabolic mode increases the offset of the other modes. 
-; rename it parabolicMod
+; ^!b ; Buy Small ask .05
+; ^!g ; Buy Low ask .05
+; ^!h ; Buy High ask .05
+; ^!n ; Buy Trip ask .5
 
-; Configurable delay times for actions
-cancelDelay := 1005
-orderDelay := 1500
+; ^!l ; Buy Small ask 0.15
+; +!g ; Buy Low ask .15
+; +!h ; Buy Hight ask .15
+; ^!i ; Buy Trip ask .15
 
-; Start the script in suspended mode
+; ^!f ; Sell Low ask -.01
+; ^!s ; Sell High ask .01
+; ^!m ; Sell 75%
+; ^!j ; Sell Half
+; +!q ; Sell all
+
+; Default states
 Suspend On
-IsSuspended := true  ; Match the starting state
-
-; Modes
-parabolicMode := false  ; Default to Parabolic Mode (off)
-scalpingMode := false    ; Default to Scalping Mode
-starterMode := true    ; Default to Starter Mode (off)
-scaleMode := false      ; Default to Scale Mode (off)
-currentMode := "Starter" ; Track the current mode
+IsSuspended := true   ; Match the starting state
+parabolicMode := false
+starterMode := false
+begMode := true
+scaleMode := false
+paraScaleMode := false
+currentMode := "Begger"
 
 ; Counters
 global XButton2_PressCount := 0
 global sell_PressCount := 0
 
-; Reset function to restore the script to its initial state
-ResetScript() {
-    global XButton2_PressCount, sell_PressCount
-
-    ; Reset counters
-    XButton2_PressCount := 0
-    sell_PressCount := 0
-
-    ; Double beep to indicate reset
-    SoundBeep, 700, 150  ; First beep
-    Sleep, 100           ; Short delay between beeps
-    SoundBeep, 700, 150  ; Second beep
-
-    ; Call UpdateDisplay safely
-    UpdateDisplay()
-}
-
-; Initialize GUI for displaying counters and states
+; GUI setup
 Gui, Font, s10 Bold, Arial
 Gui, Color, Black
 Gui, Add, Text, cWhite vScriptState w200, Suspended
@@ -46,157 +36,237 @@ Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
 Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
 Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
-Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display
 
-; Ensure GUI displays the initial state
-UpdateDisplay()
-
-; Function to update the GUI display
+; Update GUI display
+; Update GUI display with detailed mode debugging
 UpdateDisplay() {
-    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode, parabolicMode, scalpingMode, starterMode, begMode, scaleMode, paraScaleMode
 
-    ; Update the state (Suspended or Active)
+    ; Update ScriptState, XButton2Text, and SellPressText
     GuiControl,, ScriptState, % (IsSuspended ? "Suspended" : "Active")
     GuiControl,, XButton2Text, % "X: " . XButton2_PressCount
     GuiControl,, SellPressText, % "S: " . sell_PressCount
 
-    ; Determine the color and font for the current mode
-    if (currentMode = "Scalping") {
-        modeColor := "Green"
+    ; Set color dynamically for ModeText
+    if (currentMode = "Parabolic") {
+        Gui, Font, cRed
+    } else if (currentMode = "Para Scale") {
+        Gui, Font, cFuchsia 
     } else if (currentMode = "Starter") {
-        modeColor := "Yellow"
-    } else if (currentMode = "Parabolic") {
-        modeColor := "Red"
-    } else {
-        modeColor := "White"
+        Gui, Font, cYellow
+    } else if (currentMode = "Scale") {
+        Gui, Font, cLime
+    } else if (currentMode = "Begger") {
+        Gui, Font, cAqua
     }
-
-    ; Set the font and color for the ModeText
-    Gui, Font, s10 Bold, Arial
-    GuiControl, +c%modeColor%, ModeText
+    GuiControl, Font, ModeText   ; Apply the font settings
     GuiControl,, ModeText, % "Mode: " . currentMode
+
+    ; ; Debug Mode States: show all modes and their values
+    ; GuiControl,, ModeValues, % "Begger: " . (begMode ? "True" : "False")
+    ;     . " | Starter: " . (starterMode ? "True" : "False")
+    ;     . " | Parabolic: " . (parabolicMode ? "True" : "False")
+    ;     . " | Scalping: " . (scalpingMode ? "True" : "False")
+    ;     . " | ScaleMode: " . (scaleMode ? "True" : "False")
+    ;     . " | ParaScaleMode: " . (paraScaleMode ? "True" : "False")
 }
 
-
-
-; XButton2 toggles between Buy/Sell actions
 XButton2::
     if IsSuspended {
         return  ; Do nothing if suspended
     }
-    global scalpingMode, parabolicMode, starterMode, scaleMode, currentMode, XButton2_PressCount, sell_PressCount
+    global scalpingMode, parabolicMode, starterMode, begMode, scaleMode, paraScaleMode, currentMode, XButton2_PressCount, sell_PressCount
 
-    if (starterMode) {
-        ; Starter Mode Logic
+    ; Handle Beginner Mode Logic
+    if (begMode and !scaleMode) {
         if (XButton2_PressCount = 0) {
-            Send, ^!g                                 ; Buy Low ask .05
+            Send, ^!g  ; Buy Low ask .05
         } else if (XButton2_PressCount = 1) {
-            Send, ^!n                                 ; Buy Trip ask .5
+            Send, ^!g  ; Buy Low ask .05 (again)
         } else if (XButton2_PressCount = 2) {
-            Send, ^!m                                 ; Sell Half
+            Send, ^!m  ; Sell 75%
         } else if (XButton2_PressCount = 3) {
-            Send, ^!j                                 ; Sell 75%
-            ; Transition to Scale Mode
-            starterMode := false                      ; Deactivate Starter Mode
-            scaleMode := true                         ; Activate Scale Mode
-            currentMode := "Scale"                    ; Set current mode to Scale
-            XButton2_PressCount := -1                 ; Reset press count
+            Send, ^!j  ; Sell Half
+            ; Transition to Scalping Mode
+            ScaleMode := true
+            currentMode := "Scale"
+            XButton2_PressCount := 0
         }
-        XButton2_PressCount++
-    } else if (currentMode = "Scale") {
-        ; Recursive scaling logic for Starter Scale Mode
+        if (!scaleMode) {  ; Increment only if not transitioning
+            XButton2_PressCount++
+        }
+    }
+
+    ; Handle Starter Mode Logic
+    else if (starterMode and !scaleMode) {
         if (XButton2_PressCount = 0) {
-            Send, ^!b    ; Step 1: Buy Smaller
+            Send, ^!g  ; Buy Low ask .05
         } else if (XButton2_PressCount = 1) {
-            Send, ^!b    ; Step 2: Buy Smaller
+            Send, ^!n  ; Buy Trip ask .5
         } else if (XButton2_PressCount = 2) {
-            Send, ^!m    ; Sell 75%
+            Send, ^!m  ; Sell 75%
         } else if (XButton2_PressCount = 3) {
-            Send, +!q    ; Sell All
+            Send, ^!j  ; Sell Half
+            ; Transition to Starter Scale Mode
+            scaleMode := true
+            currentMode := "Scale"
+            XButton2_PressCount := 0
         }
-        
-        ; Increment after action is completed
-        XButton2_PressCount++
+        if (!scaleMode) {  ; Increment only if not transitioning
+            XButton2_PressCount++
+        }
+    }
 
-        ; Reset after completing the full cycle
-        if (XButton2_PressCount > 3) {
-            XButton2_PressCount := 0  ; Reset count for the next cycle
-        }
-    } else if (scalpingMode) {
-        ; Scalping Mode Logic
-        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
-                : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
-                : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
-                : "^!f"                                     ; Sell Low ask -.01
-        Send, %action%
-        XButton2_PressCount++
-        sell_PressCount := 0
-    } else if (parabolicMode) {
-        ; Recursive two-click strategy for Parabolic Mode
+    ; Handle Scaling Modes (Begger Scale, Starter Scale)
+    else if ((begMode or starterMode) and scaleMode) {
+        ; Begger Scale logic
         if (XButton2_PressCount = 0) {
-            Send, +!g    ; Step 1: Buy low ask 0.15
+            Send, ^!b  ; Buy Small ask .05
         } else if (XButton2_PressCount = 1) {
-            Send, ^!f    ; Step 2: Sell low ask -.01
+            Send, ^!b  ; Buy Small ask .05
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!m  ; Sell 75%
+        } else if (XButton2_PressCount = 3) {
+            Send, +!q  ; Sell all
         }
-    
-        ; Increment after action is completed
-        XButton2_PressCount++
-    
-        ; Reset after completing the cycle
-        if (XButton2_PressCount > 1) {
-            XButton2_PressCount := 0  ; Reset count for the next cycle
+        XButton2_PressCount := (XButton2_PressCount + 1) > 3 ? 0 : XButton2_PressCount + 1
+    }
+
+    ; Handle Para Scale
+    else if (parabolicMode and paraScaleMode) {
+        if (XButton2_PressCount = 0) {
+            Send, ^!l  ; Buy Small ask .15
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!l  ; Buy Small ask .15
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!m  ; Sell 75%
+        } else if (XButton2_PressCount = 3) {
+            Send, +!q  ; Sell all
         }
-    }    
-
-    ; Update GUI display
-    UpdateDisplay()
-return
-
-
-
-; Toggle Scalping Mode
-V::
-    if IsSuspended {
-        return  ; Do nothing if suspended
+        XButton2_PressCount := (XButton2_PressCount + 1) > 3 ? 0 : XButton2_PressCount + 1
     }
-    global starterMode, scalpingMode, parabolicMode, currentMode
-    scalpingMode := true
-    starterMode := false
-    parabolicMode := false
-    currentMode := "Scalping"
-    ResetScript()
-    UpdateDisplay()
-return
 
-; Toggle Starter Mode
-G::
-    if IsSuspended {
-        return  ; Do nothing if suspended
+    ; Handle Parabolic Mode (when ParaScale is not active)
+    else if (parabolicMode and !paraScaleMode) {
+        if (XButton2_PressCount = 0) {
+            Send, +!g  ; Buy Low ask .15
+        } else if (XButton2_PressCount = 1) {
+            Send, +!h  ; Buy Trip ask .15
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!m  ; Sell 75%
+        } else if (XButton2_PressCount = 3) {
+            Send, ^!j  ; Sell Half
+            paraScaleMode := true
+            currentMode := "Para Scale"
+            XButton2_PressCount := 0
+        }
+        if (!paraScaleMode) {  ; Increment only if not transitioning
+            XButton2_PressCount++
+        }
     }
-    global starterMode, scalpingMode, parabolicMode, currentMode
-    starterMode := true
-    scalpingMode := false
-    parabolicMode := false
-    currentMode := "Starter"
-    ResetScript()
+
     UpdateDisplay()
 return
 
-; Toggle Parabolic Mode
 T::
     if IsSuspended {
-        return  ; Do nothing if suspended
+        return
     }
-    global parabolicMode, scalpingMode, starterMode, currentMode
-    parabolicMode := true
-    scalpingMode := false
-    starterMode := false
-    currentMode := "Parabolic"
+    global parabolicMode, paraScaleMode, starterMode, begMode, scaleMode, currentMode
+
+    ; If in Para Scale, toggle back to Parabolic
+    if (parabolicMode and paraScaleMode) {
+        paraScaleMode := false
+        currentMode := "Parabolic"
+    }
+    ; If in Parabolic, toggle to Para Scale
+    else if (parabolicMode) {
+        paraScaleMode := true
+        currentMode := "Para Scale"
+    }
+    ; Otherwise, activate Parabolic Mode
+    else {
+        ResetModesExcept("parabolicMode")
+        paraScaleMode := false
+        currentMode := "Parabolic"
+    }
+
     ResetScript()
     UpdateDisplay()
 return
 
+G::
+    if IsSuspended {
+        return
+    }
+    global starterMode, scaleMode, begMode, parabolicMode, paraScaleMode, currentMode
 
+    ; If in Starter Scale, go back to Starter
+    if (starterMode and scaleMode) {
+        scaleMode := false
+        currentMode := "Starter"
+    }
+    ; If not already in Starter, activate Starter (reset others)
+    else if (!starterMode) {
+        starterMode := true
+        scaleMode := false
+        begMode := false
+        parabolicMode := false
+        paraScaleMode := false
+        currentMode := "Starter"
+    }
+    ; If in Starter, toggle to Starter Scale
+    else if (starterMode and !scaleMode) {
+        scaleMode := true
+        currentMode := "Scale"
+    }
+
+    ResetScript()
+    UpdateDisplay()
+return
+
+B::
+    if IsSuspended {
+        return
+    }
+    global begMode, scaleMode, starterMode, parabolicMode, paraScaleMode, currentMode
+
+    ; If in Begger Scale, toggle back to Begger
+    if (begMode and scaleMode) {
+        scaleMode := false
+        currentMode := "Begger"
+    }
+    ; If in Begger, toggle to Begger Scale
+    else if (begMode) {
+        scaleMode := true
+        currentMode := "Scale"
+    }
+    ; Otherwise, activate Begger Mode
+    else {
+        ResetModesExcept("begMode")
+        scaleMode := false
+        currentMode := "Begger"
+    }
+
+    ResetScript()
+    UpdateDisplay()
+return
+
+ResetModesExcept(modeToKeep) {
+    global begMode, starterMode, parabolicMode, scalpingMode, scaleMode, paraScaleMode
+
+    ; Reset all modes to false
+    begMode := false
+    starterMode := false
+    parabolicMode := false
+    scalpingMode := false
+    scaleMode := false
+    paraScaleMode := false
+
+    ; Activate the specified mode
+    %modeToKeep% := true
+}
 
 ; Cancel orders and reset press counts
 A::
@@ -226,6 +296,7 @@ D::
     Send, ^!f
     Sleep, DelayAfterClick
     sell_PressCount++
+    XButton2_PressCount := 0
     UpdateDisplay()
 return
 
@@ -242,16 +313,30 @@ F::
     UpdateDisplay()
 return
 
+; Reset script to initial state
+ResetScript() {
+    global XButton2_PressCount, sell_PressCount
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    SoundBeep, 700, 150
+    Sleep, 100
+    SoundBeep, 700, 150
+    UpdateDisplay()
+}
+
 ; Toggle Suspend with Tab
 Tab::
     global IsSuspended
     Suspend, Toggle                        ; Toggle suspension state
     if !IsSuspended {                      ; If the script is active (not suspended)
-        ; Reset modes to Scalping (default)
-        starterMode := true
+        ; Reset modes
         parabolicMode := false
-        scalpingMode := false               ; Ensure scalping is the default mode
-        currentMode := "Starter"          ; Update current mode to Scalping
+        scalpingMode := false
+        starterMode := false
+        begMode := true
+        scaleMode := false
+        paraScaleMode := false
+        currentMode := "Begger"
         ResetScript()                      ; Reset the script to its initial state
     }
     IsSuspended := !IsSuspended            ; Flip the suspension flag
