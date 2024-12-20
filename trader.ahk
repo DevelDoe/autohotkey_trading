@@ -1,3 +1,4 @@
+; ^!y ; Buy Tiny ask .05
 ; ^!b ; Buy Small ask .05
 ; ^!g ; Buy Low ask .05
 ; ^!h ; Buy High ask .05
@@ -8,6 +9,8 @@
 ; +!h ; Buy Hight ask .15
 ; ^!i ; Buy Trip ask .15
 
+; ^!k ; Sell tiny  ask -.01
+; ^!u ; Sell Small ask -.01
 ; ^!f ; Sell Low ask -.01
 ; ^!s ; Sell High ask .01
 ; ^!m ; Sell 75%
@@ -30,7 +33,7 @@ starterMode := false ;
 ; When to Use:
 ; If you’re cautious or less confident about the setup.
 ; If the market conditions are less volatile or more uncertain.
-begMode := true ; Slower-paced trades with room for scaling in and out.
+begMode := false ; Slower-paced trades with room for scaling in and out.
 scaleMode := false
 paraScaleMode := false
 
@@ -42,8 +45,8 @@ paraScaleMode := false
 ; When to Use:
 ; If you’re confident about a setup with tight spreads and clear momentum.
 ; If the market conditions support quick scalps (e.g., high liquidity, low volatility).
-scalpingMode:= false ; Quick trades with tight spreads and minimal risk.
-currentMode := "Begger"
+scalpingMode:= true ; Quick trades with tight spreads and minimal risk.
+currentMode := "Scalping"
 
 ; Counters
 global XButton2_PressCount := 0
@@ -56,9 +59,11 @@ Gui, Add, Text, cWhite vScriptState w200, Suspended
 Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
 Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
 Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, Add, Text, cWhite vModeValues w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
-Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display\
+Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display
 ; Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
+; Gui, Show, NoActivate x1900 y1360 w400 h300, Press Count Display
 
 ; Update GUI display
 ; Update GUI display with detailed mode debugging
@@ -72,28 +77,28 @@ UpdateDisplay() {
 
     ; Set color dynamically for ModeText
     if (currentMode = "Parabolic") {
-        Gui, Font, cRed
-    } else if (currentMode = "Para Scale") {
         Gui, Font, cFuchsia
+    } else if (currentMode = "Para Scale") {
+        Gui, Font, cGreen
     } else if (currentMode = "Starter") {
-        Gui, Font, cYellow
+        Gui, Font, cWhite
     } else if (currentMode = "Scale") {
         Gui, Font, cLime
     } else if (currentMode = "Begger") {
-        Gui, Font, cAqua
+        Gui, Font, cRed
     } else if (currentMode = "Scalping") {
-        Gui, Font, cWhite
+        Gui, Font, cYellow
     }
     GuiControl, Font, ModeText   ; Apply the font settings
     GuiControl,, ModeText, % "Mode: " . currentMode
 
-    ; Debug Mode States: show all modes and their values
+    ; Debug All Modes: Ensure all modes are displayed clearly
     ; GuiControl,, ModeValues, % "Begger: " . (begMode ? "True" : "False")
     ;     . " | Starter: " . (starterMode ? "True" : "False")
     ;     . " | Parabolic: " . (parabolicMode ? "True" : "False")
     ;     . " | Scalping: " . (scalpingMode ? "True" : "False")
-    ;     . " | ScaleMode: " . (scaleMode ? "True" : "False")
-    ;     . " | ParaScaleMode: " . (paraScaleMode ? "True" : "False")
+    ;     . " | Scale: " . (scaleMode ? "True" : "False")
+    ;     . " | ParaScale: " . (paraScaleMode ? "True" : "False")
 }
 
 XButton2::
@@ -105,7 +110,7 @@ XButton2::
     ; Handle Beginner Mode Logic
     if (begMode and !scaleMode) {
         if (XButton2_PressCount = 0) {
-            Send, ^!g  ; Buy Low ask .05
+            Send, ^!b ; Buy Small ask .05
         } else if (XButton2_PressCount = 1) {
             Send, ^!g  ; Buy Low ask .05 (again)
         } else if (XButton2_PressCount = 2) {
@@ -146,7 +151,7 @@ XButton2::
     else if ((begMode or starterMode) and scaleMode) {
         ; Begger Scale logic
         if (XButton2_PressCount = 0) {
-            Send, ^!b  ; Buy Small ask .05
+            Send, ^!y  ; Buy Tiny ask .05
         } else if (XButton2_PressCount = 1) {
             Send, ^!b  ; Buy Small ask .05
         } else if (XButton2_PressCount = 2) {
@@ -188,15 +193,26 @@ XButton2::
         if (!paraScaleMode) {  ; Increment only if not transitioning
             XButton2_PressCount++
         }
-    } else if (scalpingMode) {
-        ; Scalping Mode Logic
-        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
-            : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
-            : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
-            : "^!f"                                     ; Sell Low ask -.01
-        Send, %action%
-        XButton2_PressCount++
-        sell_PressCount := 0
+    }
+
+    else if (scalpingMode) {
+        if (XButton2_PressCount = 0) {
+            Send, ^!y ; Buy Tiny ask .05
+        } else if (XButton2_PressCount = 1) {
+            Send, ^!k ; Sell tiny  ask -.01
+        } else if (XButton2_PressCount = 2) {
+            Send, ^!b  ; Buy Small ask .05
+        } else if (XButton2_PressCount = 3) {
+            Send, ^!u  ; Sell Small ask -.01
+            ; Transition to Starter Scale Mode
+            scalpingMode := false
+            begMode := true
+            currentMode := "Begger"
+            XButton2_PressCount := 0
+        }
+        if (scalpingMode) {  ; Increment only if not transitioning
+            XButton2_PressCount++
+        }
     }
 
     UpdateDisplay()
@@ -270,7 +286,7 @@ G::
     else if (starterMode and !scaleMode) {
         scaleMode := true
         currentMode := "Scale"
-    }
+    } 
 
     ResetScript()
     UpdateDisplay()
@@ -289,6 +305,7 @@ B::
     }
     ; If in Begger, toggle to Begger Scale
     else if (begMode) {
+        ResetModesExcept("begMode")
         scaleMode := true
         currentMode := "Scale"
     }
@@ -296,6 +313,7 @@ B::
     else {
         ResetModesExcept("begMode")
         scaleMode := false
+        scalpingMode := false
         currentMode := "Begger"
     }
 
@@ -381,12 +399,12 @@ Tab::
     if !IsSuspended {                      ; If the script is active (not suspended)
         ; Reset modes
         parabolicMode := false
-        scalpingMode := false
+        scalpingMode := true
         starterMode := false
-        begMode := true
+        begMode := false
         scaleMode := false
         paraScaleMode := false
-        currentMode := "Begger"
+        currentMode := "Scalper"
         ResetScript()                      ; Reset the script to its initial state
     }
     IsSuspended := !IsSuspended            ; Flip the suspension flag
