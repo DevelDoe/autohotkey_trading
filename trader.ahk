@@ -17,11 +17,32 @@
 ; Default states
 Suspend On
 IsSuspended := true   ; Match the starting state
-parabolicMode := false
-starterMode := false
-begMode := true
+parabolicMode := false ; offsets are increased to adjust for parabolic movement
+starterMode := false ;
+
+; Begger Mode - Slower-paced trades with room for scaling in and out.
+; Allows more time to assess the trade and manage positions.
+; Suitable for slightly wider spreads or slower-moving stocks.
+; Offers flexibility to scale in with small positions before committing more capital.
+; Cons:
+; Might miss rapid moves in fast markets.
+; Requires clear support/resistance levels for effective scaling.
+; When to Use:
+; If you’re cautious or less confident about the setup.
+; If the market conditions are less volatile or more uncertain.
+begMode := true ; Slower-paced trades with room for scaling in and out.
 scaleMode := false
 paraScaleMode := false
+
+; Scalping Mode - Quick trades with tight spreads and minimal risk.
+; Designed for rapid entry and exit.
+; Limits exposure to market volatility.
+; Can quickly capture small profits multiple times.
+; Cons: Can be challenging in markets with high slippage or low liquidity.
+; When to Use:
+; If you’re confident about a setup with tight spreads and clear momentum.
+; If the market conditions support quick scalps (e.g., high liquidity, low volatility).
+scalpingMode:= false ; Quick trades with tight spreads and minimal risk.
 currentMode := "Begger"
 
 ; Counters
@@ -36,7 +57,8 @@ Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
 Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
 Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
-Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display
+Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display\
+; Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
 
 ; Update GUI display
 ; Update GUI display with detailed mode debugging
@@ -52,18 +74,20 @@ UpdateDisplay() {
     if (currentMode = "Parabolic") {
         Gui, Font, cRed
     } else if (currentMode = "Para Scale") {
-        Gui, Font, cFuchsia 
+        Gui, Font, cFuchsia
     } else if (currentMode = "Starter") {
         Gui, Font, cYellow
     } else if (currentMode = "Scale") {
         Gui, Font, cLime
     } else if (currentMode = "Begger") {
         Gui, Font, cAqua
+    } else if (currentMode = "Scalping") {
+        Gui, Font, cWhite
     }
     GuiControl, Font, ModeText   ; Apply the font settings
     GuiControl,, ModeText, % "Mode: " . currentMode
 
-    ; ; Debug Mode States: show all modes and their values
+    ; Debug Mode States: show all modes and their values
     ; GuiControl,, ModeValues, % "Begger: " . (begMode ? "True" : "False")
     ;     . " | Starter: " . (starterMode ? "True" : "False")
     ;     . " | Parabolic: " . (parabolicMode ? "True" : "False")
@@ -164,8 +188,34 @@ XButton2::
         if (!paraScaleMode) {  ; Increment only if not transitioning
             XButton2_PressCount++
         }
+    } else if (scalpingMode) {
+        ; Scalping Mode Logic
+        action := (XButton2_PressCount = 0) ? "^!h"         ; Buy High ask .05
+            : (XButton2_PressCount = 1) ? "^!s"         ; Sell High ask -.01
+            : (Mod(XButton2_PressCount, 2) = 0) ? "^!g" ; Buy Low ask .05
+            : "^!f"                                     ; Sell Low ask -.01
+        Send, %action%
+        XButton2_PressCount++
+        sell_PressCount := 0
     }
 
+    UpdateDisplay()
+return
+
+; Toggle Scalping Mode
+V::
+    if IsSuspended {
+        return  ; Do nothing if suspended
+    }
+    global parabolicMode, paraScaleMode, starterMode, begMode, scaleMode, currentMode
+    scalpingMode := true
+    parabolicMode := false
+    paraScaleMode := false
+    starterMode := false
+    begMode := false
+    scaleMode := false
+    currentMode := "Scalping"
+    ResetScript()
     UpdateDisplay()
 return
 
