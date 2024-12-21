@@ -61,9 +61,9 @@ Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
 Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
 Gui, Add, Text, cWhite vModeValues w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
-Gui, Show, NoActivate x1900 y1360 w150 h130, Press Count Display
+Gui, Show, NoActivate x1660 y900 w130 h130, Press Count Display
 ; Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
-; Gui, Show, NoActivate x1900 y1360 w400 h300, Press Count Display
+; Gui, Show, NoActivate x1700 y1060 w400 h300, Press Count Display
 
 ; Update GUI display
 ; Update GUI display with detailed mode debugging
@@ -404,7 +404,7 @@ Tab::
         begMode := false
         scaleMode := false
         paraScaleMode := false
-        currentMode := "Scalper"
+        currentMode := "Scalping"
         ResetScript()                      ; Reset the script to its initial state
     }
     IsSuspended := !IsSuspended            ; Flip the suspension flag
