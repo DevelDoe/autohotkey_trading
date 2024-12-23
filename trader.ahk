@@ -116,7 +116,7 @@ XButton2::
         } else if (XButton2_PressCount = 2) {
             Send, ^!m  ; Sell 75%
         } else if (XButton2_PressCount = 3) {
-            Send, ^!j  ; Sell Half
+            Send, ^!q  ; Sell Half
             ; Transition to Scalping Mode
             ScaleMode := true
             currentMode := "Scale"
