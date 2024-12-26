@@ -61,7 +61,7 @@ Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
 Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
 Gui, Add, Text, cWhite vModeValues w200, Mode: %currentMode%
 Gui, +AlwaysOnTop +ToolWindow -Caption
-Gui, Show, NoActivate x1660 y900 w130 h130, Press Count Display
+Gui, Show, NoActivate x1660 y700 w130 h130, Press Count Display
 ; Gui, Show, NoActivate x1900 y1360 AutoSize, Press Count Display
 ; Gui, Show, NoActivate x1700 y1060 w400 h300, Press Count Display
 
