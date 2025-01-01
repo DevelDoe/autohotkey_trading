@@ -1,23 +1,3 @@
-; ^!y ; Buy Tiny ask .05
-; ^!b ; Buy Small ask .05
-; ^!g ; Buy Low ask .05
-; ^!h ; Buy High ask .05
-; ^!n ; Buy Trip ask .5
-
-; +!y ; Buy Tiny ask .15
-; ^!l ; Buy Small ask .15
-; +!g ; Buy Low ask .15
-; +!h ; Buy Hight ask .15
-; ^!i ; Buy Trip ask .15
-
-; ^!k ; Sell tiny  ask -.01
-; ^!u ; Sell Small ask -.01
-; ^!f ; Sell Low ask -.01
-; ^!s ; Sell High ask .01
-; ^!m ; Sell 75%
-; ^!j ; Sell Half
-; +!q ; Sell all
-
 Suspend On
 IsSuspended := true
 
@@ -25,91 +5,67 @@ parabolicMode := false
 starterMode := false
 beggerMode := true
 scaleMode := false
-
 buyTinyMode := false
 buySmallMode := false
-currentMode := "Begger"
+currentMode := "beggerMode"
 
 global XButton2_PressCount := 0
 global sell_PressCount := 0
 
-Gui, Font, s10 Bold cBlack, Arial
-Gui, Color, Gray
-Gui, Add, Text, vXButton2Text w200, %XButton2_PressCount%
-Gui, Add, Text, vModeText w200, Mode: %currentMode%
-Gui, Add, Text, vTinyModeText w200, Tiny: BUY  ; Default value
-Gui, Add, Text, vSmallModeText w200, Small: BUY  ; Default value
+Gui, Font, s10 Bold, Arial
+Gui, Color, Black
+Gui, Add, Text, cWhite vScriptState w200, Suspended
+Gui, Add, Text, cWhite vXButton2Text w200, X: %XButton2_PressCount%
+Gui, Add, Text, cWhite vSellPressText w200, S: %sell_PressCount%
+Gui, Add, Text, cWhite vModeText w200, Mode: %currentMode%
+Gui, Add, Text, cWhite vModeValues w200, Mode: %currentMode%
 Gui, +AlwaysOnTop + ToolWindow - Caption
 Gui, Show, NoActivate x1660 y700 w130 h130, Press Count Display
 
-
 UpdateDisplay() {
-    global currentMode, parabolicMode, XButton2_PressCount, sell_PressCount, buyTinyMode, buySmallMode, IsSuspended
+    global XButton2_PressCount, sell_PressCount, IsSuspended, currentMode, parabolicMode, starterMode, beggerMode, scaleMode, paraScaleMode
 
-    ; Update GUI values
-    GuiControl,, XButton2Text, % "" . XButton2_PressCount
-    GuiControl,, ModeText, % currentMode . (parabolicMode ? " (Parabolic)" : "")
+    GuiControl, , ScriptState, %(IsSuspended ? "Suspended" : "Active")
+    GuiControl, , XButton2Text, %"X: " . XButton2_PressCount
+    GuiControl, , SellPressText, %"S: " . sell_PressCount
 
-    ; Update TinyModeText and SmallModeText values
-    GuiControl,, TinyModeText, % "Tiny: " . (buyTinyMode ? "SELL" : "BUY")
-    GuiControl,, SmallModeText, % "Small: " . (buySmallMode ? "SELL" : "BUY")
-
-    ; Change GUI background color based on mode
-    if (currentMode = "Begger") {
-        Gui, Color, Yellow
-    } else if (currentMode = "Starter") {
-        Gui, Color, White
-    } else if (currentMode = "Scale") {
-        Gui, Color, Lime
-    } else {
-        Gui, Color, Gray  ; Default for unexpected modes
+    if (currentMode = "beggerMode"){
+        Gui, Font, cYellow
+    } else if (currentMode = "starterMode") {
+        Gui, Font, cWhite
+    } else if (currentMode = "scaleMode") {
+        Gui, Font, cLime
+    } else if (currentMode = "parabolicMode") {
+        Gui, Font, cFuchsia
     }
 
-    ; Override with fuchsia if in parabolicMode
-    if (parabolicMode) {
-        Gui, Color, Red
-    }
-    if (IsSuspended) {
-        Gui, Color, Gray
-    }
+    GuiControl, Font, ModeText
+    GuiControl,, ModeText, % currentMode
+
 }
 
+ResetModesExcept(modeToKeep) {
+    global beggerMode, starterMode, parabolicMode, scaleMode, paraScaleMode
 
-
-SwitchToMode(modeToKeep) {
-    global beggerMode, starterMode, parabolicMode, scaleMode, buyTinyMode, buySmallMode, currentMode
+    ; Reset all modes to false
     beggerMode := false
     starterMode := false
+    parabolicMode := false
     scaleMode := false
     buyTinyMode := false
     buySmallMode := false
 
-    if (modeToKeep = "Begger") {
-        beggerMode := true
-        currentMode := "Begger"
-    } else if (modeToKeep = "Starter") {
-        starterMode := true
-        currentMode := "Starter"
-    } else if (modeToKeep = "Scale") {
-        scaleMode := true
-        currentMode := "Scale"
-    }
+    ; Activate the specified mode
+    %modeToKeep% := true
+    currentMode := %modeToKeep%
 }
 
 ; Reset script to initial state
 ResetScript() {
     global XButton2_PressCount, sell_PressCount
-    parabolicMode := false
-    starterMode := false
-    beggerMode := true
-    scaleMode := false
-
-    buyTinyMode := false
-    buySmallMode := false
-    currentMode := "Begger"
-
-    global XButton2_PressCount := 0
-    global sell_PressCount := 0
+    XButton2_PressCount := 0
+    sell_PressCount := 0
+    ResetModesExcept("beggerMode")
     SoundBeep, 700, 150
     Sleep, 100
     SoundBeep, 700, 150
@@ -144,15 +100,15 @@ XButton2::
             }
         } else if (XButton2_PressCount = 1) {
             if(parabolicMode) {
-                Send, +!h ; Buy Hight ask .15
+                Send, +!g  ; Buy Low ask .15
             } else {
-                Send, ^!h ; Buy High ask .05
+                Send, ^!g  ; Buy Low ask .05
             }
         } else if (XButton2_PressCount = 2) {
-            Send, ^!m  ; Sell 75%
+            Send, ^ !m  ; Sell 75%
         } else if (XButton2_PressCount = 3) {
-            Send, +!q ; Sell all
-            SwitchToMode("Scale")
+            Send, ^ !q  ; Sell Half
+            ResetModesExcept("scaleMode")
             XButton2_PressCount := 0
         }
         if (beggerMode) {
@@ -178,7 +134,7 @@ XButton2::
             Send, ^!m  ; Sell 75%
         } else if (XButton2_PressCount = 3) {
             Send, ^!j  ; Sell Half
-            SwitchToMode("Scale")
+            ResetModesExcept("scaleMode")
             XButton2_PressCount := 0
         }
         if (starterMode) {
@@ -203,10 +159,7 @@ XButton2::
         } else if (XButton2_PressCount = 3) {
             Send, +!q  ; Sell all
         }
-        XButton2_PressCount++
-        if (XButton2_PressCount > 3) {
-            XButton2_PressCount := 0
-        }
+        XButton2_PressCount := 0
     }
 
     UpdateDisplay()
@@ -218,15 +171,14 @@ G::
     }
     global currentMode
 
-    XButton2_PressCount := 0
-
     ; Toggle between beggerMode and starterMode
-    if (currentMode = "Begger") {
-        SwitchToMode("Starter")
+    if (currentMode = "beggerMode") {
+        ResetModesExcept("starterMode")
     } else {
-        SwitchToMode("Begger")
+        ResetModesExcept("beggerMode")
     }
 
+    ResetScript()
     UpdateDisplay()
 return
 
@@ -243,6 +195,7 @@ T::
         parabolicMode := true
     }
 
+    ResetScript()
     UpdateDisplay()
 return
 
@@ -257,11 +210,12 @@ A::
 return
 
 ; SELL LOW ASK
-S::
+D::
     if IsSuspended {
         return  ; Do nothing if suspended
     }
-    Send, +!q
+    global XButton2_PressCount, sell_PressCount
+    Send, ^!f
     ResetScript()
     UpdateDisplay()
 return
@@ -270,20 +224,23 @@ D::
     if IsSuspended {
         return  ; Do nothing if suspended
     }
-    global buyTinyMode, parabolicMode
+    global buyTinyMode
 
+    ; Toggle between Buy and Sell Tiny
     if (buyTinyMode) {
         Send, ^!k  ; Sell Tiny ask -.01
         buyTinyMode := false
     } else {
-        if (parabolicMode) {
-            Send, +!y  ; Buy Tiny ask .15 (parabolic mode)
+        if(parabolicMode) {
+            send, +!y   ; Buy Tiny ask .15
         } else {
-            Send, ^!y  ; Buy Tiny ask .05 (normal mode)
+            Send, ^!y  ; Buy Tiny ask .05
         }
+        Send, ^!y  ; Buy Tiny ask .05
         buyTinyMode := true
     }
 
+    Sleep, DelayAfterClick
     UpdateDisplay()
 return
 
@@ -291,7 +248,7 @@ F::
     if IsSuspended {
         return  ; Do nothing if suspended
     }
-    global buySmallMode, parabolicMode
+    global buyTinyMode
 
     ; Toggle between Buy and Sell Tiny
     if (buySmallMode) {
@@ -306,5 +263,6 @@ F::
         buySmallMode := true
     }
 
+    Sleep, DelayAfterClick
     UpdateDisplay()
 return
