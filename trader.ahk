@@ -14,6 +14,7 @@
 ; ^!u ; Sell Small ask -.01
 ; ^!f ; Sell Low ask -.01
 ; ^!s ; Sell High ask .01
+; ^!o ; Sell Trip ask .15
 ; ^!m ; Sell 75%
 ; ^!j ; Sell Half
 ; +!q ; Sell all
@@ -261,13 +262,13 @@ F::
 
     ; Toggle between Buy and Sell Tiny
     if (buySmallMode) {
-        Send, ^!u  ; Sell Small ask -.01
+        Send, ^!f ; Sell Low ask -.01
         buySmallMode := false
     } else {
         if(parabolicMode) {
-            send, ^!l  ; Buy Small ask 0.15
+            send, +!g ; Buy Low ask .15
         } else {
-            Send, ^!b  ; Buy Small ask .05
+            Send, ^!g ; Buy Low ask .05
         }
         buySmallMode := true
     }
