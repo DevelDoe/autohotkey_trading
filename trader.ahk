@@ -131,15 +131,15 @@ XButton2::
     if (starterMode) {
         if (XButton2_PressCount = 0) {
             if(parabolicMode) {
-                send, ^!l  ; Buy Small ask 0.15
+                send, +!y ; Buy Tiny ask .15
             } else {
-                Send, ^!b  ; Buy Small ask .05
+                Send, ^!y ; Buy Tiny ask .05
             }
         } else if (XButton2_PressCount = 1) {
             if(parabolicMode) {
-                Send, +!h ; Buy Hight ask .15
+                send, +!g   ; Buy Low ask .15
             } else {
-                Send, ^!h ; Buy High ask .05
+                Send, ^!g   ; Buy Low ask .05
             }
         } else if (XButton2_PressCount = 2) {
             Send, ^!m  ; Sell 75%
@@ -162,9 +162,9 @@ XButton2::
             }
         } else if (XButton2_PressCount = 1) {
             if(parabolicMode) {
-                send, +!g   ; Buy Low ask .15
+                send, ^!l ; Buy Small ask .15
             } else {
-                Send, ^!g   ; Buy Low ask .05
+                Send, ^!b ; Buy Small ask .05
             }
         } else if (XButton2_PressCount = 2) {
             Send, ^!m  ; Sell 75%
