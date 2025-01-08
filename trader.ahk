@@ -118,7 +118,7 @@ Tab::
     }
     IsSuspended := !IsSuspended            ; Flip the suspension flag
     UpdateDisplay()                        ; Update the GUI to reflect the new state
-    SoundBeep, % (IsSuspended ? 300 : 600) ; Low pitch for Suspended, high pitch for Active
+    SoundBeep, % (IsSuspended ? 100 : 600) ; Low pitch for Suspended, high pitch for Active
 return
 
 XButton2::
@@ -193,6 +193,7 @@ G::
     } else {
         SwitchToMode("Starter")
     }
+    SoundBeep, % (starterMode ? 300 : 200)
 
     UpdateDisplay()
 return
@@ -209,6 +210,8 @@ T::
     } else {
         parabolicMode := true
     }
+
+    SoundBeep, % (!parabolicMode ? 250 : 900)
 
     UpdateDisplay()
 return
@@ -237,10 +240,11 @@ D::
     if IsSuspended {
         return  ; Do nothing if suspended
     }
-    global buyTinyMode, parabolicMode
+    global buyTinyMode, parabolicMode, XButton2_PressCount
 
     if (buyTinyMode) {
         Send, ^!k  ; Sell Tiny ask -.01
+        XButton2_PressCount := 0
         buyTinyMode := false
     } else {
         if (parabolicMode) {
@@ -248,6 +252,7 @@ D::
         } else {
             Send, ^!y  ; Buy Tiny ask .05 (normal mode)
         }
+        XButton2_PressCount++
         buyTinyMode := true
     }
 
