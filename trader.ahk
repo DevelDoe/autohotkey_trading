@@ -142,7 +142,7 @@ XButton2::
                 Send, ^!g   ; Buy Low ask .05
             }
         } else if (XButton2_PressCount = 2) {
-            Send, ^!m  ; Sell 75%
+            Send, +!q ; Sell all
         } else if (XButton2_PressCount = 3) {
             Send, +!q ; Sell all
             SwitchToMode("Scale")
@@ -167,7 +167,7 @@ XButton2::
                 Send, ^!b ; Buy Small ask .05
             }
         } else if (XButton2_PressCount = 2) {
-            Send, ^!m  ; Sell 75%
+            Send, +!q ; Sell all
         } else if (XButton2_PressCount = 3) {
             Send, +!q  ; Sell all
         }
