@@ -171,6 +171,54 @@ S::
     UpdateDisplay()
 return
 
+; Sell Low Action
+C::
+    if IsSuspended {
+        return
+    }
+    Send, +a ; SLA 0
+    SoundBeep, 200
+return
+
+; Sell High Action
+V::
+    if IsSuspended {
+        return
+    }
+    Send, +s ; SHA 0
+    SoundBeep, 200
+return
+
+; Buy Low Action
+E::
+    if IsSuspended {
+        return
+    }
+    global parabolicMode
+
+    if (parabolicMode) {
+        Send, +^1 ; BLA .15 (parabolic mode)
+    } else {
+        Send, +1 ; BLA .05
+    }
+    SoundBeep, 500
+return
+
+; Buy High Action
+R::
+    if IsSuspended {
+        return
+    }
+    global parabolicMode
+
+    if (parabolicMode) {
+        Send, +^2 ; BHA .15 (parabolic mode)
+    } else {
+        Send, +2 ; BHA .05
+    }
+    SoundBeep, 500
+return
+
 ; Low Action Key
 D::
     if IsSuspended {
