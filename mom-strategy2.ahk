@@ -190,7 +190,7 @@ V::
 return
 
 ; Buy Low Action
-E::
+D::
     if IsSuspended {
         return
     }
@@ -205,7 +205,7 @@ E::
 return
 
 ; Buy High Action
-R::
+F::
     if IsSuspended {
         return
     }
@@ -219,8 +219,8 @@ R::
     SoundBeep, 500
 return
 
-; Low Action Key
-D::
+; Low Auto Action Key
+E::
     if IsSuspended {
         return
     }
@@ -241,8 +241,8 @@ D::
     UpdateDisplay()
 return
 
-; High Action Key
-F::
+; High Auto Action Key
+R::
     if IsSuspended {
         return
     }
