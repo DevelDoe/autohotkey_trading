@@ -36,21 +36,21 @@ parabolicY := 700
 
 ; Initialize Low Sell Mode GUI
 Gui, 1: +AlwaysOnTop +ToolWindow -Caption
-Gui, 1: Font, s8  cWhite, Segoe UI
-Gui, 1: Add, Text, x0 y5 w25 h25 Center vLowBox, L
-Gui, 1: Show, NoActivate x%lowSellX% y%lowSellY% w40 h40, Low Sell Mode
+Gui, 1: Font, s10  cWhite, Segoe UI
+Gui, 1: Add, Text, x0 y0 w20 h20 Center vLowBox, L
+Gui, 1: Show, NoActivate x%lowSellX% y%lowSellY% w20 h20, Low Sell Mode
 
 ; Initialize High Sell Mode GUI
 Gui, 2: +AlwaysOnTop +ToolWindow -Caption
-Gui, 2: Font, s8  cWhite, Segoe UI
-Gui, 2: Add, Text, x0 y5 w25 h25 Center vHighBox, H
-Gui, 2: Show, NoActivate x%highSellX% y%highSellY% w40 h40, High Sell Mode
+Gui, 2: Font, s10  cWhite, Segoe UI
+Gui, 2: Add, Text, x0 y0 w20 h20 Center vHighBox, H
+Gui, 2: Show, NoActivate x%highSellX% y%highSellY% w20 h20, High Sell Mode
 
 ; Initialize Parabolic Mode GUI
 Gui, 3: +AlwaysOnTop +ToolWindow -Caption
 ; Gui, 3: Font, s5 Bold cWhite, Arial
 ; Gui, 3: Add, Text, x0 y3 w25 h15 Center vParabolicBox, P
-Gui, 3: Show, NoActivate x%parabolicX% y%parabolicY% w40 h15, Parabolic Mode
+Gui, 3: Show, NoActivate x%parabolicX% y%parabolicY% w10 h10, Parabolic Mode
 Gui, 3: Color, Black ; Initial color is black for !parabolicMode
 
 UpdateDisplay() {
