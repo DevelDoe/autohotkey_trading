@@ -39,13 +39,13 @@ liveY := 700
 
 ; Initialize Low Sell Mode GUI
 Gui, 1: +AlwaysOnTop +ToolWindow -Caption
-Gui, 1: Font, s10  cWhite, Segoe UI
+Gui, 1: Font, s10 cWhite, Segoe UI
 Gui, 1: Add, Text, x0 y0 w20 h20 Center vLowBox, L
 Gui, 1: Show, NoActivate x%lowSellX% y%lowSellY% w20 h20, Low Sell Mode
 
 ; Initialize High Sell Mode GUI
 Gui, 2: +AlwaysOnTop +ToolWindow -Caption
-Gui, 2: Font, s10  cWhite, Segoe UI
+Gui, 2: Font, s10 cWhite, Segoe UI
 Gui, 2: Add, Text, x0 y0 w20 h20 Center vHighBox, H
 Gui, 2: Show, NoActivate x%highSellX% y%highSellY% w20 h20, High Sell Mode
 
@@ -54,13 +54,8 @@ Gui, 3: +AlwaysOnTop +ToolWindow -Caption
 Gui, 3: Show, NoActivate x%parabolicX% y%parabolicY% w20 h20, Parabolic Mode
 Gui, 3: Color, Black
 
-; Initialize live Mode GUI
-Gui, 4: +AlwaysOnTop +ToolWindow -Caption
-Gui, 4: Show, NoActivate x%liveX% y%liveY% w20 h20, Live Mode
-Gui, 4: Color, Gray
-
 UpdateDisplay() {
-    global lowSellMode, highSellMode, parabolicMode, IsSuspended, parabolicX, parabolicY, liveX, liveY, liveMode
+    global lowSellMode, highSellMode, parabolicMode, IsSuspended, liveMode
 
     ; Determine font and background colors
     if (IsSuspended) {
@@ -74,9 +69,21 @@ UpdateDisplay() {
         lowSellFontColor := "White"
         highSellFontColor := "White"
         parabolicBgColor := (parabolicMode ? "Red" : "Black")
-        lowSellBgColor := (lowSellMode ? "Yellow" : "Green")
-        highSellBgColor := (highSellMode ? "Yellow" : "Green")
-        liveBgColor := (liveMode ? "FF00FF" : "00FFFF")
+
+        ; Apply color logic based on liveMode and sell modes
+        if (lowSellMode) {
+            lowSellBgColor := "Yellow"  ; Override with yellow if lowSellMode is active
+        } else {
+            lowSellBgColor := liveMode ? "FF00FF" : "006666"
+        }
+
+        if (highSellMode) {
+            highSellBgColor := "Yellow"  ; Override with yellow if highSellMode is active
+        } else {
+            highSellBgColor := liveMode ? "FF00FF" : "006666"
+        }
+
+        liveBgColor := (liveMode ? "FF00FF" : "006666")
     }
 
     ; Update Low Sell Mode GUI
@@ -90,9 +97,8 @@ UpdateDisplay() {
     ; Update Parabolic Mode GUI
     Gui, 3: Color, %parabolicBgColor%
 
-    ; Update live Mode GUI
-    Gui, 4: Color, %liveBgColor%
 }
+
 
 ; Allow dragging for all GUIs
 OnMessage(0x201, "StartDrag") ; WM_LBUTTONDOWN for drag handling
