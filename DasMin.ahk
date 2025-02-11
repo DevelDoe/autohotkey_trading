@@ -50,7 +50,7 @@ EndDrag(wParam, lParam, msg, hwnd) {
     global parabolicX, parabolicY, liveX, liveY
     ; Save new positions
     if WinActive("Parabolic Mode") {
-        WinGetPos, parabolicX, parabolicY,,, A
+        WinGetPos, parabolicX, parabolicY,,, Agg
     } else if WinActive("Live Mode") {
         WinGetPos, liveX, liveY,,, A
     }
@@ -89,7 +89,7 @@ MoveAndClick(x, y) {
 return
 
 ; Toggle Parabolic Mode with 'G'
-G::
++^!G::
     if IsSuspended
         return
     global parabolicMode
@@ -99,15 +99,21 @@ G::
 return
 
 ; Hotkey for the 'T' key
-$*t::
++^!$*t::
     if IsSuspended
         return
-    global tPressCount
-    tPressCount++
-    if (tPressCount = 1) {
-        ; Set a timer to check for double-tap within 300 milliseconds
-        SetTimer, CheckDoubleTap, -300
+    global tPressCount, lastPressTime
+    currentTime := A_TickCount
+
+    if (currentTime - lastPressTime < 300) {  ; If pressed within 300ms, toggle liveMode
+        liveMode := !liveMode
+        SoundBeep, % liveMode ? 900 : 300
+        UpdateDisplay()
+        tPressCount := 0
+    } else {
+        tPressCount := 1
     }
+    lastPressTime := currentTime
 return
 
 CheckDoubleTap:
@@ -123,7 +129,7 @@ CheckDoubleTap:
 return
 
 ; Cancel All Orders with 'A'
-A::
++^!A::
     if IsSuspended
         return
     MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
@@ -131,7 +137,7 @@ A::
 return
 
 ; SPB with 'S'
-X::
++^!X::
     if IsSuspended
         return
     global liveMode
@@ -140,7 +146,7 @@ X::
 return
 
 ; SPA with 'C'
-C::
++^!C::
     if IsSuspended
         return
     global liveMode
@@ -150,7 +156,7 @@ C::
 return
 
 ; S75A with 'V'
-V::
++^!V::
     if IsSuspended
         return
     global liveMode
@@ -160,7 +166,7 @@ V::
 return
 
 ; BLA with 'E'
-E::
++^!E::
     if IsSuspended
         return
     global liveMode, parabolicMode
@@ -174,7 +180,7 @@ E::
 return
 
 ; BHA with 'R'
-R::
++^!R::
     if IsSuspended
         return
     global liveMode, parabolicMode
@@ -186,3 +192,5 @@ R::
     }
     SoundBeep, 500
 return
+
+UpdateDisplay()  ; Ensure GUI starts in the correct color state
