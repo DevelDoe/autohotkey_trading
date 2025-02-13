@@ -1,13 +1,16 @@
 
 MButton::
-    Click 1            ; Double-click to select where to past
-    Sleep, 500
-    Click 2            ; Double-click to select where to past
-    Sleep, 500
-    Send, ^v           ; Paste clipboard content
-    Sleep, 500
-    Send, {Enter}      ; Press Enter
+    Click 1          ; Step 1: Click once
+    Sleep, 100
+    Send, ^a         ; Step 2: Select all
+    Sleep, 100
+    Send, {Backspace} ; Step 3: Delete selected text
+    Sleep, 100
+    Send, ^v         ; Step 4: Paste clipboard content
+    Sleep, 100
+    Send, {Enter}         ; Step 4: Paste clipboard content
 return
+
 
 XButton1::
     Click             ; First single click
