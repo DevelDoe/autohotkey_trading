@@ -172,7 +172,7 @@ return
     global liveMode, parabolicMode
     MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     if parabolicMode {
-        Send, % liveMode ? "+^1" : "!+^1"
+        Send, % liveMode ? "+3" : "!+3"
     } else {
         Send, % liveMode ? "+1" : "!+1"
     }
@@ -186,7 +186,7 @@ return
     global liveMode, parabolicMode
     MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     if parabolicMode {
-        Send, % liveMode ? "+^2" : "!+^2"
+        Send, % liveMode ? "+4" : "!+4"
     } else {
         Send, % liveMode ? "+2" : "!+2"
     }
