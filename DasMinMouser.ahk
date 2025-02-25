@@ -56,6 +56,29 @@ EndDrag(wParam, lParam, msg, hwnd) {
     }
 }
 
+; Set coordinate mode to screen-relative
+CoordMode, Mouse, Screen
+
+; Define the monitor number (e.g., 2 for the second monitor)
+monitorNumber := 2
+
+; Retrieve the dimensions of the specified monitor (second monitor)
+SysGet, monitorLeft, 76, monitorNumber
+SysGet, monitorTop, 77, monitorNumber
+SysGet, monitorRight, 78, monitorNumber
+SysGet, monitorBottom, 79, monitorNumber
+
+
+; Calculate the desired coordinates on the second monitor
+centerX := monitorLeft + 1100 ; Offset for the desired X-coordinate on the second screen
+centerY := monitorTop + 730  ; Offset for the desired Y-coordinate on the second screen
+
+; Function to move the mouse and click at specific coordinates
+MoveAndClick(x, y) {
+    MouseMove, x, y ; Move the cursor to (x, y)
+    Click ; Perform a mouse click at the current position
+}
+
 ; Toggle Suspend with Shift+Ctrl+Alt+S
 +^!S::
     global IsSuspended
@@ -109,7 +132,7 @@ return
 +^!A::
     if IsSuspended
         return
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     Send, ^q  ; CLX all orders
 return
 
@@ -118,7 +141,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     Send, % liveMode ? "+q" : "!+q"
 return
 
@@ -127,7 +150,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     Send, % liveMode ? "+a" : "!+a"
     SoundBeep, 200
 return
@@ -137,7 +160,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     Send, % liveMode ? "+s" : "!+s"
     SoundBeep, 200
 return
@@ -147,7 +170,7 @@ return
     if IsSuspended
         return
     global liveMode, parabolicMode
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     if parabolicMode {
         Send, % liveMode ? "+3" : "!+3"
     } else {
@@ -161,7 +184,7 @@ return
     if IsSuspended
         return
     global liveMode, parabolicMode
-   
+    MoveAndClick(centerX, centerY) ; Move and click at the defined coordinates
     if parabolicMode {
         Send, % liveMode ? "+4" : "!+4"
     } else {
