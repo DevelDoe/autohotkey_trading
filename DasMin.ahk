@@ -5,10 +5,10 @@ Suspend On
 IsSuspended := true
 liveMode := false
 parabolicMode := false
-parabolicX := 1704
-parabolicY := 700
-liveX := 1504
-liveY := 700
+parabolicX := 40
+parabolicY := 10
+liveX := 10
+liveY := 10
 tPressCount := 0
 
 ; Initialize Parabolic Mode GUI
