@@ -141,6 +141,25 @@ return
     Send, % liveMode ? "+s" : "!+s"
     SoundBeep, 200
 return
+beepIndex := 1  ; initialize global variable
+
+startBeeps() {
+    global beepIndex
+    beepIndex := 1
+    SetTimer, playBeeps, 1000
+}
+
+playBeeps:
+    global beepIndex
+    if (beepIndex > 5) {
+        SetTimer, playBeeps, Off
+        return
+    }
+
+    freq := 400 + (beepIndex * 100)
+    SoundBeep, %freq%, 100
+    beepIndex++
+return
 
 ; BLA with 'E'
 +^!E::
@@ -153,7 +172,7 @@ return
     } else {
         Send, % liveMode ? "+1" : "!+1"
     }
-    SoundBeep, 500
+    startBeeps()
 return
 
 ; BHA with 'R'
@@ -167,7 +186,8 @@ return
     } else {
         Send, % liveMode ? "+2" : "!+2"
     }
-    SoundBeep, 500
+    startBeeps()
 return
+
 
 UpdateDisplay()  ; Ensure GUI starts in the correct color state
