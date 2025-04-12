@@ -145,20 +145,23 @@ beepIndex := 1  ; initialize global variable
 
 startBeeps() {
     global beepIndex
-    beepIndex := 1
+    beepIndex := 5  ; Start from 5
     SetTimer, playBeeps, 1000
 }
 
 playBeeps:
     global beepIndex
-    if (beepIndex > 5) {
+    if (beepIndex < 1) {
         SetTimer, playBeeps, Off
         return
     }
 
-    freq := 400 + (beepIndex * 100)
-    SoundBeep, %freq%, 100
-    beepIndex++
+    voice := ComObjCreate("SAPI.SpVoice")
+    voice.Volume := 1 ; Adjust volume here (0–100)
+    voice.Rate := 0    ; You can also slow it down: -2 = slower, +2 = faster
+    voice.Speak(beepIndex, 1) ; 1 = async so it doesn’t block
+
+    beepIndex--
 return
 
 ; BLA with 'E'
