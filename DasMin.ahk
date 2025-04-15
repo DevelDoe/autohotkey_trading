@@ -109,7 +109,7 @@ return
 +^!A::
     if IsSuspended
         return
-   
+
     Send, ^q  ; CLX all orders
 return
 
@@ -118,7 +118,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+
     Send, % liveMode ? "+q" : "!+q"
 return
 
@@ -127,7 +127,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+
     Send, % liveMode ? "+a" : "!+a"
     SoundBeep, 200
 return
@@ -137,7 +137,7 @@ return
     if IsSuspended
         return
     global liveMode
-   
+
     Send, % liveMode ? "+s" : "!+s"
     SoundBeep, 200
 return
@@ -169,7 +169,7 @@ return
     if IsSuspended
         return
     global liveMode, parabolicMode
-   
+
     if parabolicMode {
         Send, % liveMode ? "+3" : "!+3"
     } else {
@@ -183,7 +183,7 @@ return
     if IsSuspended
         return
     global liveMode, parabolicMode
-   
+
     if parabolicMode {
         Send, % liveMode ? "+4" : "!+4"
     } else {
@@ -191,6 +191,5 @@ return
     }
     startBeeps()
 return
-
 
 UpdateDisplay()  ; Ensure GUI starts in the correct color state
