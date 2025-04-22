@@ -157,7 +157,7 @@ playBeeps:
     }
 
     voice := ComObjCreate("SAPI.SpVoice")
-    voice.Volume := 1 ; Adjust volume here (0–100)
+    voice.Volume := 10 ; Adjust volume here (0–100)
     voice.Rate := 0    ; You can also slow it down: -2 = slower, +2 = faster
     voice.Speak(beepIndex, 1) ; 1 = async so it doesn’t block
 
