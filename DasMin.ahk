@@ -143,6 +143,18 @@ return
 return
 beepIndex := 1  ; initialize global variable
 
+global soundEnabled := true  ; Sound is enabled by default
+
+^L::  ; Ctrl+L toggles sound
+    soundEnabled := !soundEnabled
+    ToolTip % "Sound " (soundEnabled ? "ON" : "OFF")
+    SetTimer, RemoveToolTip, -1000
+return
+
+RemoveToolTip:
+    ToolTip
+return
+
 startBeeps() {
     global beepIndex
     beepIndex := 5  ; Start from 5
@@ -150,16 +162,18 @@ startBeeps() {
 }
 
 playBeeps:
-    global beepIndex
+    global beepIndex, soundEnabled
     if (beepIndex < 1) {
         SetTimer, playBeeps, Off
         return
     }
 
-    voice := ComObjCreate("SAPI.SpVoice")
-    voice.Volume := 10 ; Adjust volume here (0–100)
-    voice.Rate := 0    ; You can also slow it down: -2 = slower, +2 = faster
-    voice.Speak(beepIndex, 1) ; 1 = async so it doesn’t block
+    if (soundEnabled) {
+        voice := ComObjCreate("SAPI.SpVoice")
+        voice.Volume := 10
+        voice.Rate := 0
+        voice.Speak(beepIndex, 1)
+    }
 
     beepIndex--
 return
